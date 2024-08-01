@@ -1,41 +1,31 @@
-from app import create_app, db
+# import sys
+sys.path.insert(0, '.')
+
+from app import app, db
 from models import Course, Student, Enrollment
 
-def seed_database():
-    app = create_app()
-    with app.app_context():
-        # Clear existing data
-        db.drop_all()
-        db.create_all()
+with app.app_context():
+    # Clear existing data
+    db.drop_all()
+    db.create_all()
 
-        # Seed Courses
-        courses = [
-            Course(name='Introduction to Programming', description='Learn the basics of programming.'),
-            Course(name='Data Structures and Algorithms', description='An in-depth look at data structures and algorithms.'),
-            Course(name='Database Systems', description='Understanding database design and management.')
-        ]
-        db.session.add_all(courses)
+    # Add sample data
+    course1 = Course(id='1', title='Python Basics', description='Learn Python from scratch', url='http://example.com/python-basics')
+    course2 = Course(id='2', title='Advanced Python', description='Deep dive into Python features', url='http://example.com/advanced-python')
 
-        # Seed Students
-        students = [
-            Student(name='Alice Johnson', email='alice.johnson@example.com'),
-            Student(name='Bob Smith', email='bob.smith@example.com'),
-            Student(name='Charlie Brown', email='charlie.brown@example.com')
-        ]
-        db.session.add_all(students)
+    db.session.add(course1)
+    db.session.add(course2)
 
-        # Seed Enrollments
-        enrollments = [
-            Enrollment(course_id=1, student_id=1, progress=75.0),
-            Enrollment(course_id=1, student_id=2, progress=85.0),
-            Enrollment(course_id=2, student_id=2, progress=90.0),
-            Enrollment(course_id=3, student_id=3, progress=60.0)
-        ]
-        db.session.add_all(enrollments)
+    student1 = Student(name='John Doe', email='john.doe@example.com')
+    student2 = Student(name='Jane Smith', email='jane.smith@example.com')
 
-        # Commit the changes
-        db.session.commit()
+    db.session.add(student1)
+    db.session.add(student2)
 
-if __name__ == '__main__':
-    seed_database()
-    print("Database seeded successfully.")
+    enrollment1 = Enrollment(course_id='1', student_id=1, progress=0.5)
+    enrollment2 = Enrollment(course_id='2', student_id=2, progress=0.8)
+
+    db.session.add(enrollment1)
+    db.session.add(enrollment2)
+
+    db.session.commit()
