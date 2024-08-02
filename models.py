@@ -12,8 +12,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    role = db.Column(db.String(50), default='student')  # Default role is 'student'
     password = db.Column(db.String(129), nullable=False)
+    role = db.Column(db.String(50), default='user')
     created_at = db.Column(db.DateTime, default=db.func.now())
 
     @validates('email')
@@ -23,12 +23,6 @@ class User(db.Model):
             raise ValueError("Invalid email address")
         return email
 
-    @validates('role')
-    def validate_role(self, key, role):
-        if role not in ['student', 'admin']:
-            raise ValueError("Invalid role. Must be 'student' or 'admin'.")
-        return role
-
     def __repr__(self):
         return f"<User {self.id}: {self.username}>"
 
@@ -37,6 +31,6 @@ class User(db.Model):
             "id": self.id,
             "username": self.username,
             "email": self.email,
+             'role': self.role ,
             "created_at": self.created_at,
-            "role": self.role
         }

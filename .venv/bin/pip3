@@ -1,4 +1,6 @@
-#!/home/mustafe/Documents/LMS-backend/.venv/bin/python
+#!/bin/sh
+'''exec' "/home/tk/Development/Canvas assignments/phase-5/LMS-backend/.venv/bin/python" "$0" "$@"
+' '''
 # -*- coding: utf-8 -*-
 import re
 import sys

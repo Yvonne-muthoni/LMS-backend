@@ -1,9 +1,10 @@
-from flask import Flask, make_response, request
+from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from models import db, User
+from flask_cors import CORS
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -12,6 +13,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = "super-secret"
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins (adjust as needed)
 
 migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
@@ -25,35 +27,25 @@ class Users(Resource):
         current_user = get_jwt_identity()
         users = User.query.all()
         users_list = [user.to_dict() for user in users]
-        body = {
-            "count": len(users_list),
-            "users": users_list
-        }
-        return make_response(body, 200)
+        return make_response({"count": len(users_list), "users": users_list}, 200)
 
     def post(self):
         email = User.query.filter_by(email=request.json.get('email')).first()
         if email:
             return make_response({"message": "Email already taken"}, 422)
 
-        role = request.json.get("role", "student")  # Default role is 'student'
-
         new_user = User(
             username=request.json.get("username"),
             email=request.json.get("email"),
-            role=role,
-            password=bcrypt.generate_password_hash(request.json.get("password"))
+            password=bcrypt.generate_password_hash(request.json.get("password")).decode('utf-8'),
+            role=request.json.get("role", "user")  # Default role to 'user'
         )
 
         db.session.add(new_user)
         db.session.commit()
 
         access_token = create_access_token(identity=new_user.id)
-        response = {
-            "user": new_user.to_dict(),
-            "access_token": access_token
-        }
-        return make_response(response, 201)
+        return make_response({"user": new_user.to_dict(), "access_token": access_token, "success": True, "message": "User has been created successfully"}, 201)
 
 class Login(Resource):
     def post(self):
@@ -65,7 +57,9 @@ class Login(Resource):
             access_token = create_access_token(identity=user.id)
             return make_response({
                 "user": user.to_dict(),
-                "access_token": access_token
+                "access_token": access_token,
+                "success": True,
+                "message": "Login successful"
             }, 200)
         return make_response({"message": "Invalid credentials"}, 401)
 
