@@ -1,31 +1,100 @@
-# import sys
-sys.path.insert(0, '.')
+import re
+import json
+from app import create_app, db
+from models import Course
 
-from app import app, db
-from models import Course, Student, Enrollment
+app = create_app()
 
-with app.app_context():
-    # Clear existing data
-    db.drop_all()
-    db.create_all()
+def get_youtube_thumbnail_url(video_url):
+    # Regex to extract YouTube video ID from different URL formats
+    youtube_id_match = re.search(r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|v\/|embed\/|user\/\S+\/\S+\/|embed\/|\S+\/\S+\/|v\/)|youtu\.be\/|youtube\.com\/(?:playlist\?list=|embed\/|v\/|watch\?v=))([a-zA-Z0-9_-]{11})', video_url)
+    if youtube_id_match:
+        video_id = youtube_id_match.group(1)
+        return f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
+    return None
 
-    # Add sample data
-    course1 = Course(id='1', title='Python Basics', description='Learn Python from scratch', url='http://example.com/python-basics')
-    course2 = Course(id='2', title='Advanced Python', description='Deep dive into Python features', url='http://example.com/advanced-python')
+def seed_database():
+    with app.app_context():
+        db.create_all()
+        
+        # Sample data with video URLs
+        courses = [
+            {
+                "title": "Introduction to Python",
+                "description": "Learn the basics of Python programming, including syntax, data structures, and basic algorithms.",
+                "video": "https://www.youtube.com/watch?v=rfscVS0vtbw",
+                "tech_stack": "Python,Flask,SQLAlchemy",
+                "what_you_will_learn": json.dumps([
+                    "Understand Python syntax and semantics",
+                    "Implement basic algorithms and data structures",
+                    "Work with Flask to create web applications"
+                ])
+            },
+            {
+                "title": "Mastering JavaScript",
+                "description": "Dive deep into JavaScript and learn how to build dynamic, responsive web applications.",
+                "video": "https://www.youtube.com/watch?v=PkZNo7MFNFg",
+                "tech_stack": "JavaScript,React,Node.js,Express",
+                "what_you_will_learn": json.dumps([
+                    "Advanced JavaScript concepts and ES6 features",
+                    "Building single-page applications with React",
+                    "Backend development with Node.js and Express"
+                ])
+            },
+            {
+                "title": "Full-Stack Web Development",
+                "description": "A comprehensive course covering both front-end and back-end web development technologies.",
+                "video": "https://www.youtube.com/watch?v=Q33KBiDriJY",
+                "tech_stack": "HTML,CSS,JavaScript,Python,Django,PostgreSQL",
+                "what_you_will_learn": json.dumps([
+                    "Design and build full-stack web applications",
+                    "Implement responsive design using HTML and CSS",
+                    "Develop RESTful APIs with Django and PostgreSQL"
+                ])
+            },
+            {
+                "title": "Data Science with Python",
+                "description": "Explore the world of data science using Python, including data analysis, visualization, and machine learning.",
+                "video": "https://www.youtube.com/watch?v=ua-CiDNNj30",
+                "tech_stack": "Python,Pandas,NumPy,Matplotlib,Scikit-learn",
+                "what_you_will_learn": json.dumps([
+                    "Data manipulation and analysis with Pandas",
+                    "Data visualization with Matplotlib and Seaborn",
+                    "Machine learning algorithms and model evaluation"
+                ])
+            },
 
-    db.session.add(course1)
-    db.session.add(course2)
+                        {
+                "title": "Mastering JavaScript",
+                "description": "Dive deep into JavaScript and learn how to build dynamic, responsive web applications.",
+                "video": "https://www.youtube.com/watch?v=PkZNo7MFNFg",
+                "tech_stack": "JavaScript,React,Node.js,Express",
+                "what_you_will_learn": json.dumps([
+                    "Advanced JavaScript concepts and ES6 features",
+                    "Building single-page applications with React",
+                    "Backend development with Node.js and Express"
+                ])
+            },
+        ]
+        
+        # Insert data
+        for course_data in courses:
+            thumbnail_url = get_youtube_thumbnail_url(course_data["video"])
+            if not thumbnail_url:
+                # Fallback if thumbnail URL extraction fails
+                thumbnail_url = "https://example.com/image/default_thumbnail.jpg"
+            
+            course = Course(
+                title=course_data["title"],
+                description=course_data["description"],
+                image=thumbnail_url,
+                video=course_data["video"],
+                tech_stack=course_data["tech_stack"],
+                what_you_will_learn=course_data["what_you_will_learn"]
+            )
+            db.session.add(course)
+        
+        db.session.commit()
 
-    student1 = Student(name='John Doe', email='john.doe@example.com')
-    student2 = Student(name='Jane Smith', email='jane.smith@example.com')
-
-    db.session.add(student1)
-    db.session.add(student2)
-
-    enrollment1 = Enrollment(course_id='1', student_id=1, progress=0.5)
-    enrollment2 = Enrollment(course_id='2', student_id=2, progress=0.8)
-
-    db.session.add(enrollment1)
-    db.session.add(enrollment2)
-
-    db.session.commit()
+if __name__ == "__main__":
+    seed_database()
