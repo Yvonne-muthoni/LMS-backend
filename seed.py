@@ -17,7 +17,7 @@ def seed_database():
     with app.app_context():
         db.create_all()
         
-        # Sample data with video URLs
+    
         courses = [
             {
                 "title": "Introduction to Python",

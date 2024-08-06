@@ -7,11 +7,11 @@ import requests
 
 course_bp = Blueprint('courses', __name__)
 
-# Helper function to get video details from YouTube
+#  video details from YouTube
 def get_youtube_video_details(video_url):
     video_id = video_url.split('v=')[-1]
-    api_key = 'AIzaSyAuu1LOJKCFPEg1dXLAYgL5DrUOFgSMbP4'  # Replace with your actual YouTube API key
-    api_url = f'https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={api_key}'
+    # api_key = 'AIzaSyAuu1LOJKCFPEg1dXLAYgL5DrUOFgSMbP4'  #  actual YouTube API key
+    # api_url = f'https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={api_key}'
     
     response = requests.get(api_url)
     if response.status_code == 200:

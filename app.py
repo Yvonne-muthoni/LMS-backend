@@ -18,8 +18,8 @@ def create_app():
     migrate.init_app(app, db)
 
     with app.app_context():
-        import models
-
+        from models import Course  
+        db.create_all()  
     from routes import course_bp
     app.register_blueprint(course_bp, url_prefix='/courses')
 
