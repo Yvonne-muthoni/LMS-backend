@@ -1,3 +1,4 @@
+# 
 from flask import Blueprint, request, jsonify
 from app import db
 from models import Course
@@ -7,12 +8,10 @@ import requests
 
 course_bp = Blueprint('courses', __name__)
 
-#  video details from YouTube
 def get_youtube_video_details(video_url):
     video_id = video_url.split('v=')[-1]
-    # api_key = 'AIzaSyAuu1LOJKCFPEg1dXLAYgL5DrUOFgSMbP4'  #  actual YouTube API key
-    # api_url = f'https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={api_key}'
-    
+    api_key = 'AIzaSyDFmJtpuBlqxxhGqW66BDXEi5kvhWSd87c'
+    api_url = f'https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={api_key}'    
     response = requests.get(api_url)
     if response.status_code == 200:
         data = response.json()
@@ -25,12 +24,10 @@ def get_youtube_video_details(video_url):
             }
     return None
 
-# Helper function to generate random tech stack
 def generate_tech_stack():
     techs = ['Python', 'JavaScript', 'React', 'Node.js', 'Flask', 'Django', 'Vue.js', 'Angular', 'Express', 'MongoDB', 'PostgreSQL', 'Docker', 'Kubernetes', 'AWS', 'Google Cloud', 'Azure']
     return random.sample(techs, random.randint(3, 6))
 
-# Helper function to generate random learning outcomes
 def generate_learning_outcomes():
     outcomes = [
         "Build responsive web applications",
@@ -96,7 +93,13 @@ def update_course(id):
 
 @course_bp.route('/<int:id>', methods=['DELETE'])
 def delete_course(id):
-    course = Course.query.get_or_404(id)
+    print(f"Received request to delete course with ID: {id}")  
+    course = Course.query.get(id)
+    if not course:
+        print(f"Course with ID {id} not found.")  
+        return jsonify({"error": "Course not found"}), 404
+    
     db.session.delete(course)
     db.session.commit()
+    print(f"Course with ID {id} successfully deleted.")  
     return '', 204
