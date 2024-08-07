@@ -6,14 +6,12 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from models import db, User
 from flask_cors import CORS
 
-# Initialize the Flask application
 app = Flask(__name__)
 
-# Configure the database
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = "super-secret"
-CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins (adjust as needed)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
@@ -38,7 +36,7 @@ class Users(Resource):
             username=request.json.get("username"),
             email=request.json.get("email"),
             password=bcrypt.generate_password_hash(request.json.get("password")).decode('utf-8'),
-            role=request.json.get("role", "user")  # Default role to 'user'
+            role=request.json.get("role", "user")
         )
 
         db.session.add(new_user)
@@ -63,9 +61,22 @@ class Login(Resource):
             }, 200)
         return make_response({"message": "Invalid credentials"}, 401)
 
+class VerifyToken(Resource):
+    @jwt_required()
+    def post(self):
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        if user:
+            return make_response({
+                "user": user.to_dict(),
+                "success": True,
+                "message": "Token is valid"
+            }, 200)
+        return make_response({"message": "Invalid token"}, 401)
+
 api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
+api.add_resource(VerifyToken, '/verify-token')
 
 if __name__ == '__main__':
     app.run(debug=True)
-# updated everythings
