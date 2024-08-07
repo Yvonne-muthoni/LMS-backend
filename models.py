@@ -32,5 +32,4 @@ class User(db.Model):
             "username": self.username,
             "email": self.email,
             "role": self.role,
-            "created_at": str(self.created_at),  # Convert to string for JSON serialization
-        }
+            "created_at": str(self.created_at), }
