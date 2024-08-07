@@ -1,4 +1,3 @@
-
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
@@ -121,7 +120,7 @@ class Courses(Resource):
             print(f"Error deleting course: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-# Define a separate resource class for GET requests
+
 class QuestionsGet(Resource):
     def get(self, category):
         try:
@@ -133,7 +132,7 @@ class QuestionsGet(Resource):
             print(f"Error fetching questions: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-# Define a separate resource class for POST requests
+
 class QuestionsPost(Resource):
     def post(self):
         try:
@@ -141,7 +140,7 @@ class QuestionsPost(Resource):
             new_question = Question(
                 question_text=data.get("question_text"),
                 category=data.get("category"),
-                options=json.dumps(data.get("options")),  # Store options as a JSON string
+                options=json.dumps(data.get("options")),  
                 correct_answer=data.get("correct_answer")
             )
             db.session.add(new_question)
@@ -163,8 +162,8 @@ api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
-api.add_resource(QuestionsGet, '/questions/<string:category>')  # GET requests for a specific category
-api.add_resource(QuestionsPost, '/questions')  # POST requests
+api.add_resource(QuestionsGet, '/questions/<string:category>')  
+api.add_resource(QuestionsPost, '/questions')  
 
 app.register_blueprint(course_bp, url_prefix='/courses') 
 

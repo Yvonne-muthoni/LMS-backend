@@ -6,12 +6,14 @@ from models import Course
 app = create_app()
 
 def get_youtube_thumbnail_url(video_url):
-    # Regex to extract YouTube video ID from different URL formats
+    # Regex to extract YouTube video ID from different URL 
     youtube_id_match = re.search(r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|v\/|embed\/|user\/\S+\/\S+\/|embed\/|\S+\/\S+\/|v\/)|youtu\.be\/|youtube\.com\/(?:playlist\?list=|embed\/|v\/|watch\?v=))([a-zA-Z0-9_-]{11})', video_url)
     if youtube_id_match:
         video_id = youtube_id_match.group(1)
         return f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
     return None
+
+
 
 def seed_database():
     with app.app_context():
