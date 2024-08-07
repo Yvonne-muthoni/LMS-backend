@@ -1,3 +1,4 @@
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from sqlalchemy.orm import validates
@@ -33,11 +34,13 @@ class User(db.Model):
             "username": self.username,
             "email": self.email,
             "role": self.role,
-            "created_at": str(self.created_at), }
-    
+            "created_at": str(self.created_at),
+        }
 
 
 class Course(db.Model):
+    __tablename__ = 'courses'
+
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
@@ -56,9 +59,31 @@ class Course(db.Model):
             'techStack': self.tech_stack.split(',') if self.tech_stack else [],
             'whatYouWillLearn': json.loads(self.what_you_will_learn) if self.what_you_will_learn else []
         }
-    
+
     def truncate_description(self, description, max_length=200):
         """Truncate description to a maximum length and add ellipsis."""
         if description and len(description) > max_length:
             return description[:max_length] + '...'
         return description
+
+
+class Question(db.Model):
+    __tablename__ = 'questions'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    question_text = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(50), nullable=False)  
+    options = db.Column(db.Text, nullable=False)  
+    correct_answer = db.Column(db.String(255), nullable=False)
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'questionText': self.question_text,
+            'category': self.category,
+            'options': json.loads(self.options),  
+            'correctAnswer': self.correct_answer
+        }
+
+    def __repr__(self):
+        return f"<Question {self.id}: {self.question_text}>"
