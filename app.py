@@ -1,4 +1,3 @@
-
 import base64
 from datetime import datetime
 import os
@@ -6,8 +5,8 @@ from flask import Flask, request, jsonify
 import requests
 from flask_migrate import Migrate
 from flask_restful import Resource, Api
-from models import db, User, Subscription, Payment
 import logging
+from models import db, User, Course, Question, Subscription, Payment
 
 
 
@@ -152,6 +151,7 @@ class SubscriptionResource(Resource):
             'payment_response': payment_response
         }, 201
 
+
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
     data = request.get_json()
@@ -202,7 +202,8 @@ from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from models import db, User, Course, Question  
+from models import db, User, Course, Question, Subscription, Payment
+
 from flask_cors import CORS
 import json
 import random
@@ -323,6 +324,14 @@ class QuestionsGet(Resource):
     def get(self, category):
         try:
             print(f"GET /questions/{category} route accessed")
+            # Ensure the category is valid
+            valid_categories = [
+                'HTML', 'CSS', 'JavaScript', 'React', 'Redux', 'TypeScript', 'Node.js', 'Express',
+                'MongoDB', 'SQL', 'Python', 'Django', 'Flask', 'Ruby', 'Rails', 'PHP', 'Laravel', 'Java', 'Spring'
+            ]
+            if category not in valid_categories:
+                return make_response({"message": "Invalid category"}, 400)
+            
             questions = Question.query.filter_by(category=category).all()
             questions_list = [question.as_dict() for question in questions]
             return make_response({"questions": questions_list}, 200)
@@ -331,37 +340,36 @@ class QuestionsGet(Resource):
             return make_response({"message": "An error occurred"}, 500)
 
 class QuestionsPost(Resource):
-    def post(self):
+    def post(self, category):
         try:
+            # Ensure the category is valid
+            valid_categories = [
+                'HTML', 'CSS', 'JavaScript', 'React', 'Redux', 'TypeScript', 'Node.js', 'Express',
+                'MongoDB', 'SQL', 'Python', 'Django', 'Flask', 'Ruby', 'Rails', 'PHP', 'Laravel', 'Java', 'Spring'
+            ]
+            if category not in valid_categories:
+                return make_response({"message": "Invalid category"}, 400)
+
             data = request.json
             new_question = Question(
                 question_text=data.get("question_text"),
-                category=data.get("category"),
+                category=category,
                 options=json.dumps(data.get("options")),  
                 correct_answer=data.get("correct_answer")
             )
             db.session.add(new_question)
             db.session.commit()
-            return make_response({"question": new_question.as_dict(), "message": "Question created successfully"}, 201)
+            return make_response({"question": new_question.as_dict(), "message": " successfull"}, 201)
         except Exception as e:
             print(f"Error creating question: {e}")
             return make_response({"message": "An error occurred"}, 500)
-
-@app.route('/questions/<int:id>', methods=['GET'])
-def get_question(id):
-    question = Question.query.get(id)
-    if question:
-        return jsonify(question.as_dict()), 200
-    else:
-        return jsonify({"error": "Question not found"}), 404
-    
 
 api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
-api.add_resource(QuestionsGet, '/questions/<string:category>')  
-api.add_resource(QuestionsPost, '/questions')  
+api.add_resource(QuestionsGet, '/questions/<string:category>')
+api.add_resource(QuestionsPost, '/questions/<string:category>')
 
 app.register_blueprint(course_bp, url_prefix='/courses') 
 
