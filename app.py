@@ -319,49 +319,74 @@ class Courses(Resource):
             print(f"Error deleting course: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-class QuestionsGet(Resource):
-    def get(self, category):
-        try:
-            print(f"GET /questions/{category} route accessed")
-            questions = Question.query.filter_by(category=category).all()
-            questions_list = [question.as_dict() for question in questions]
-            return make_response({"questions": questions_list}, 200)
-        except Exception as e:
-            print(f"Error fetching questions: {e}")
-            return make_response({"message": "An error occurred"}, 500)
+valid_categories = [
+    'HTML', 'CSS', 'JavaScript', 'React', 'Redux', 'TypeScript', 'Node.js', 'Express',
+    'MongoDB', 'SQL', 'Python', 'Django', 'Flask', 'Ruby', 'Rails', 'PHP', 'Laravel', 'Java', 'Spring'
+]
 
 class QuestionsPost(Resource):
-    def post(self):
+  
+    def post(self, category):
         try:
+            if category not in valid_categories:
+                return make_response({"message": "Invalid category"}, 400)
+
             data = request.json
+            if not data or not isinstance(data, dict):
+                return make_response({"message": "Invalid JSON data"}, 400)
+            
+            question_text = data.get("question_text")
+            options = data.get("options")
+            correct_answer = data.get("correct_answer")
+
+            if not question_text or not options or not correct_answer:
+                return make_response({"message": "Missing required fields"}, 400)
+            
             new_question = Question(
-                question_text=data.get("question_text"),
-                category=data.get("category"),
-                options=json.dumps(data.get("options")),  
-                correct_answer=data.get("correct_answer")
+                question_text=question_text,
+                category=category,
+                options=json.dumps(options),
+                correct_answer=correct_answer
             )
             db.session.add(new_question)
             db.session.commit()
             return make_response({"question": new_question.as_dict(), "message": "Question created successfully"}, 201)
         except Exception as e:
-            print(f"Error creating question: {e}")
+            logging.error(f"Error creating question: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-@app.route('/questions/<int:id>', methods=['GET'])
-def get_question(id):
-    question = Question.query.get(id)
-    if question:
-        return jsonify(question.as_dict()), 200
-    else:
-        return jsonify({"error": "Question not found"}), 404
+@app.route('/questions/<category>', methods=['POST'])
+
+def add_question(category):
+    if category not in valid_categories:
+        return jsonify({"message": "Invalid category"}), 400
+
+    data = request.json
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    if not all(k in data for k in ("question_text", "options", "correct_answer")):
+        return jsonify({"message": "Missing required fields"}), 400
     
+    try:
+        new_question = Question(
+            question_text=data["question_text"],
+            category=category,
+            options=json.dumps(data["options"]),
+            correct_answer=data["correct_answer"]
+        )
+        db.session.add(new_question)
+        db.session.commit()
+        return jsonify({"question": new_question.as_dict(), "message": "Question created successfully"}), 201
+    except Exception as e:
+        return jsonify({"message": "An error occurred", "details": str(e)}), 500
+
+api.add_resource(QuestionsPost, '/questions/<category>')
 
 api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
-api.add_resource(QuestionsGet, '/questions/<string:category>')  
-api.add_resource(QuestionsPost, '/questions')  
+ 
 
 app.register_blueprint(course_bp, url_prefix='/courses') 
 
