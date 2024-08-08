@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 flask = "*"
+flask-restful = "*"
 flask-sqlalchemy = "*"
 flask-migrate = "*"
 flask-restful = "*"
@@ -15,6 +16,8 @@ flask-cors = "*"
 gunicorn = "*"
 flasgger = "*"
 pytest = "*"
+flask-sqlalchemy = "*"
+paypalrestsdk = "*"
 requests = "*"
 
 [dev-packages]
