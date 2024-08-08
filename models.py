@@ -4,12 +4,6 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    subscriptions = db.relationship('Subscription', backref='user', lazy=True)
-    payments = db.relationship('Payment', backref='user', lazy=True)
 
 class Subscription(db.Model):
     id = db.Column(db.Integer, primary_key=True)
