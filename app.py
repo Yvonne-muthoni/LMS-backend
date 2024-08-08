@@ -1,4 +1,3 @@
-
 import base64
 from datetime import datetime
 import os
@@ -151,6 +150,7 @@ class SubscriptionResource(Resource):
             'subscription_id': subscription.id,
             'payment_response': payment_response
         }, 201
+
 
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
