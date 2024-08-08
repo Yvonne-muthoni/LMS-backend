@@ -1,2 +1,2 @@
-instance
-migration
+.venv 
+.env
