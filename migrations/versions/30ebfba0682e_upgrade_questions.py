@@ -1,8 +1,8 @@
-"""Create Subscription and Payment tables
+"""upgrade questions
 
-Revision ID: a0995a2850e1
+Revision ID: 30ebfba0682e
 Revises: 
-Create Date: 2024-08-08 20:08:50.190580
+Create Date: 2024-08-08 21:49:34.211306
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'a0995a2850e1'
+revision = '30ebfba0682e'
 down_revision = None
 branch_labels = None
 depends_on = None
