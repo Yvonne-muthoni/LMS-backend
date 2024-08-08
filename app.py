@@ -1,3 +1,4 @@
+
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
@@ -120,7 +121,6 @@ class Courses(Resource):
             print(f"Error deleting course: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-
 class QuestionsGet(Resource):
     def get(self, category):
         try:
@@ -131,7 +131,6 @@ class QuestionsGet(Resource):
         except Exception as e:
             print(f"Error fetching questions: {e}")
             return make_response({"message": "An error occurred"}, 500)
-
 
 class QuestionsPost(Resource):
     def post(self):
@@ -149,6 +148,7 @@ class QuestionsPost(Resource):
         except Exception as e:
             print(f"Error creating question: {e}")
             return make_response({"message": "An error occurred"}, 500)
+
 @app.route('/questions/<int:id>', methods=['GET'])
 def get_question(id):
     question = Question.query.get(id)
@@ -156,7 +156,7 @@ def get_question(id):
         return jsonify(question.as_dict()), 200
     else:
         return jsonify({"error": "Question not found"}), 404
-
+    
 
 api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
