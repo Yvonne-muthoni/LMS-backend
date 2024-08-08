@@ -16,10 +16,10 @@ db.init_app(app)
 migrate = Migrate(app, db)
 api = Api(app)
 
-# Configure logging
+
 logging.basicConfig(level=logging.DEBUG)
 
-# Load environment variables for M-Pesa
+
 CONSUMER_KEY = os.getenv('CONSUMER_KEY')
 CONSUMER_SECRET = os.getenv('CONSUMER_SECRET')
 SHORTCODE = os.getenv('SHORTCODE')
@@ -61,12 +61,12 @@ class SubscriptionResource(Resource):
         if not user:
             return {'error': 'User not found'}, 404
 
-        # Create a new Payment record
+        
         payment = Payment(user_id=user.id, amount=amount, phone_number=phone_number)
         db.session.add(payment)
         db.session.commit()
 
-        # Call M-Pesa API to initiate payment
+        
         access_token = get_mpesa_access_token()
         headers = {
             'Authorization': f'Bearer {access_token}',
@@ -132,13 +132,13 @@ class SubscriptionResource(Resource):
             'amount': amount
         }
 
-        # Initiate payment through M-Pesa
+
         payment_response = self.initiate_mpesa_payment(payment_data)
 
         if payment_response[1] != 201:
             return {'error': 'Failed to initiate payment'}, 400
 
-        # Record subscription (if applicable)
+        
         subscription = Subscription(user_id=user.id, amount=amount)
         db.session.add(subscription)
         db.session.commit()
@@ -153,14 +153,14 @@ class SubscriptionResource(Resource):
 def mpesa_callback():
     data = request.get_json()
 
-    # Log the incoming callback data for debugging
+
     logging.debug(f'Callback Data: {data}')
 
     if not data:
         logging.error("No data received in callback")
         return jsonify({"ResultCode": 1, "ResultDesc": "No data received"}), 400
     
-    # Process the callback data and update payment status
+    
     try:
         stk_callback = data['Body']['stkCallback']
         checkout_request_id = stk_callback['CheckoutRequestID']
@@ -170,12 +170,12 @@ def mpesa_callback():
         logging.error(f'Missing key in callback data: {e}')
         return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
 
-    # Log the extracted callback data
+    
     logging.debug(f'CheckoutRequestID: {checkout_request_id}')
     logging.debug(f'ResultCode: {result_code}')
     logging.debug(f'ResultDesc: {result_desc}')
 
-    # Find the corresponding payment record
+    
     payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
     if payment:
         logging.debug(f'Payment record found: {payment.id}')
