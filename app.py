@@ -379,6 +379,38 @@ def add_question(category):
         return jsonify({"question": new_question.as_dict(), "message": "Question created successfully"}), 201
     except Exception as e:
         return jsonify({"message": "An error occurred", "details": str(e)}), 500
+# class QuestionsGet(Resource):
+#     def get(self, category):
+#         valid_categories = ['HTML', 'CSS', 'javascript', 'react', 'redux', 'typescript', 'node', 'express', 'mongodb', 'sql', 'python', 'django', 'flask', 'ruby', 'rails', 'php', 'laravel', 'java', 'spring']
+#         try:
+#             if category not in valid_categories:
+#                 return make_response({"message": "Invalid category"}, 400)
+            
+#             questions = Question.query.filter_by(category=category).all()
+#             if not questions:
+#                 return make_response({"message": "No questions found for this category"}, 404)
+            
+#             questions_list = [question.as_dict() for question in questions]
+#             return make_response({"questions": questions_list}, 200)
+#         except Exception as e:
+#             logging.error(f"Error fetching questions: {e}")
+#             return make_response({"message": "An error occurred"}, 500)
+class QuestionsGet(Resource):
+    valid_categories = ['HTML', 'CSS', 'javascript', 'react', 'redux', 'typescript', 'node', 'express', 'mongodb', 'sql', 'python', 'django', 'flask', 'ruby', 'rails', 'php', 'laravel', 'java', 'spring']
+    def get(self, category):
+        try:
+            if category not in valid_categories:
+                return make_response({"message": "Invalid category"}, 400)
+            
+            questions = Question.query.filter_by(category=category).all()
+            if not questions:
+                return make_response({"message": "No questions found for this category"}, 404)
+            
+            questions_list = [question.as_dict() for question in questions]
+            return make_response({"questions": questions_list}, 200)
+        except Exception as e:
+            logging.error(f"Error fetching questions: {e}")
+            return make_response({"message": "An error occurred"}, 500)
 
 api.add_resource(QuestionsPost, '/questions/<category>')
 
@@ -387,6 +419,7 @@ api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
  
+api.add_resource(QuestionsGet, '/questions/<category>')
 
 app.register_blueprint(course_bp, url_prefix='/courses') 
 
