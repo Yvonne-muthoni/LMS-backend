@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import base64
 from datetime import datetime
 import os
-from models import db, User, Subscription, Payment
+from models import db, User, Subscription, Payment, Question
 import logging
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
@@ -10,12 +10,9 @@ from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_cors import CORS
-import json
-import random
 import requests
+import json
 from routes import course_bp
-
-
 load_dotenv()
 
 app = Flask(__name__)
@@ -23,10 +20,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_SECRET_KEY"] = "super-secret"
 
-
-
 logging.basicConfig(level=logging.DEBUG)
-
 
 CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -36,13 +30,11 @@ jwt = JWTManager(app)
 db.init_app(app)
 api = Api(app)
 
-
 CONSUMER_KEY = os.getenv('CONSUMER_KEY')
 CONSUMER_SECRET = os.getenv('CONSUMER_SECRET')
 SHORTCODE = os.getenv('SHORTCODE')
 LIPA_NA_MPESA_ONLINE_PASSKEY = os.getenv('LIPA_NA_MPESA_ONLINE_PASSKEY')
 PHONE_NUMBER = os.getenv('PHONE_NUMBER')
-
 
 def get_mpesa_access_token():
     api_url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
@@ -64,6 +56,7 @@ def generate_password(shortcode, passkey):
     data_to_encode = f"{shortcode}{passkey}{timestamp}"
     encoded_string = base64.b64encode(data_to_encode.encode())
     return encoded_string.decode('utf-8'), timestamp
+
 class SubscriptionResource(Resource):
     def initiate_mpesa_payment(self, user_id, amount, phone_number):
         # Create payment record
@@ -87,8 +80,8 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-            "CallBackURL": "https://0688-105-163-157-135.ngrok-free.app/callback",
-            "AccountReference": "SubscriptionPayment",
+            "CallBackURL": "https://229c-105-163-157-135.ngrok-free.app/callback",  # Replace with actual callback URL
+            "AccountReference": f"Subscription{user_id}",
             "TransactionDesc": "Subscription payment"
         }
 
@@ -154,8 +147,6 @@ class SubscriptionResource(Resource):
             'payment_response': payment_response
         }, 201
 
-
-
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
     data = request.get_json()
@@ -182,7 +173,6 @@ def mpesa_callback():
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
     else:
         return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
-
 
     
 class Users(Resource):
@@ -243,7 +233,6 @@ class VerifyToken(Resource):
 class Courses(Resource):
     def get(self):
         try:
-            print("GET /courses route accessed") 
             courses = Course.query.all()
             courses_list = [course.as_dict() for course in courses]
             return make_response({"courses": courses_list}, 200)
@@ -282,51 +271,102 @@ class Courses(Resource):
             print(f"Error deleting course: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-class QuestionsGet(Resource):
-    def get(self, category):
-        try:
-            print(f"GET /questions/{category} route accessed")
-            questions = Question.query.filter_by(category=category).all()
-            questions_list = [question.as_dict() for question in questions]
-            return make_response({"questions": questions_list}, 200)
-        except Exception as e:
-            print(f"Error fetching questions: {e}")
-            return make_response({"message": "An error occurred"}, 500)
+valid_categories = [
+    'HTML', 'CSS', 'JavaScript', 'React', 'Redux', 'TypeScript', 'Node.js', 'Express',
+    'MongoDB', 'SQL', 'Python', 'Django', 'Flask', 'Ruby', 'Rails', 'PHP', 'Laravel', 'Java', 'Spring'
+]
 
 class QuestionsPost(Resource):
-    def post(self):
+  
+    def post(self, category):
         try:
+            if category not in valid_categories:
+                return make_response({"message": "Invalid category"}, 400)
+
             data = request.json
+            if not data or not isinstance(data, dict):
+                return make_response({"message": "Invalid JSON data"}, 400)
+            
+            question_text = data.get("question_text")
+            options = data.get("options")
+            correct_answer = data.get("correct_answer")
+
+            if not question_text or not options or not correct_answer:
+                return make_response({"message": "Missing required fields"}, 400)
+            
             new_question = Question(
-                question_text=data.get("question_text"),
-                category=data.get("category"),
-                options=json.dumps(data.get("options")),  
-                correct_answer=data.get("correct_answer")
+                question_text=question_text,
+                category=category,
+                options=json.dumps(options),
+                correct_answer=correct_answer
             )
             db.session.add(new_question)
             db.session.commit()
             return make_response({"question": new_question.as_dict(), "message": "Question created successfully"}, 201)
         except Exception as e:
-            print(f"Error creating question: {e}")
+            logging.error(f"Error creating question: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-@app.route('/questions/<int:id>', methods=['GET'])
-def get_question(id):
-    question = Question.query.get(id)
-    if question:
-        return jsonify(question.as_dict()), 200
-    else:
-        return jsonify({"error": "Question not found"}), 404
+@app.route('/questions/<category>', methods=['POST'])
+
+def add_question(category):
+    if category not in valid_categories:
+        return jsonify({"message": "Invalid category"}), 400
+
+    data = request.json
+    if not data:
+        return jsonify({"message": "No data provided"}), 400
+    if not all(k in data for k in ("question_text", "options", "correct_answer")):
+        return jsonify({"message": "Missing required fields"}), 400
     
+    try:
+        new_question = Question(
+            question_text=data["question_text"],
+            category=category,
+            options=json.dumps(data["options"]),
+            correct_answer=data["correct_answer"]
+        )
+        db.session.add(new_question)
+        db.session.commit()
+        return jsonify({"question": new_question.as_dict(), "message": "Question created successfully"}), 201
+    except Exception as e:
+        return jsonify({"message": "An error occurred", "details": str(e)}), 500
+
+class QuestionsGet(Resource):
+    valid_categories = ['HTML', 'CSS', 'javascript', 'react', 'redux', 'typescript', 'node', 'express', 'mongodb', 'sql', 'python', 'django', 'flask', 'ruby', 'rails', 'php', 'laravel', 'java', 'spring']
+    def get(self, category):
+        try:
+            if category not in valid_categories:
+                return make_response({"message": "Invalid category"}, 400)
+            
+            questions = Question.query.filter_by(category=category).all()
+            if not questions:
+                return make_response({"message": "No questions found for this category"}, 404)
+            
+            questions_list = [question.as_dict() for question in questions]
+            return make_response({"questions": questions_list}, 200)
+        except Exception as e:
+            logging.error(f"Error fetching questions: {e}")
+            return make_response({"message": "An error occurred"}, 500)
+        
+@app.route('/courses/count', methods=['GET'])
+def get_course_count():
+    try:
+        count = Course.query.count()  
+        return jsonify({'count': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+api.add_resource(QuestionsPost, '/questions/<category>')
 
 api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
-api.add_resource(QuestionsGet, '/questions/<string:category>')  
-api.add_resource(QuestionsPost, '/questions')  
 api.add_resource(SubscriptionResource, '/subscribe')
-
+ 
+api.add_resource(QuestionsGet, '/questions/<category>')
 
 app.register_blueprint(course_bp, url_prefix='/courses') 
 
@@ -334,4 +374,3 @@ app.register_blueprint(course_bp, url_prefix='/courses')
 
 if __name__ == '__main__':
     app.run(debug=True)
-    CORS(app)
