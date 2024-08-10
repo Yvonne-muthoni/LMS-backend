@@ -1,8 +1,10 @@
 from dotenv import load_dotenv
+from sqlalchemy.exc import SQLAlchemyError
+
 import base64
 from datetime import datetime
 import os
-from models import db, User, Subscription, Payment, Question
+from models import db, User, Subscription, Payment, Question,Course
 import logging
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
@@ -348,14 +350,19 @@ class QuestionsGet(Resource):
         except Exception as e:
             logging.error(f"Error fetching questions: {e}")
             return make_response({"message": "An error occurred"}, 500)
-        
+
 @app.route('/courses/count', methods=['GET'])
-def get_course_count():
+def count_active_courses():
     try:
-        count = Course.query.count()  
-        return jsonify({'count': count})
+        # Assuming there is an `is_active` field in the `Course` model
+        count = Course.query.filter_by(is_active=True).count()
+        return jsonify({"count": count}), 200
+    except SQLAlchemyError as e:
+        app.logger.error(f"Database error: {str(e)}")
+        return jsonify({"error": "Internal Server Error"}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error(f"General error: {str(e)}")
+        return jsonify({"error": "Internal Server Error"}), 500
 
 
 api.add_resource(QuestionsPost, '/questions/<category>')

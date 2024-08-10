@@ -83,6 +83,7 @@ class Course(db.Model):
     video = db.Column(db.String(255), nullable=True)
     tech_stack = db.Column(db.String(255), nullable=True)
     what_you_will_learn = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)  # New field
 
     def as_dict(self):
         return {
@@ -92,7 +93,8 @@ class Course(db.Model):
             'image': self.image,
             'video': self.video,
             'techStack': self.tech_stack.split(',') if self.tech_stack else [],
-            'whatYouWillLearn': json.loads(self.what_you_will_learn) if self.what_you_will_learn else []
+            'whatYouWillLearn': json.loads(self.what_you_will_learn) if self.what_you_will_learn else [],
+            'is_active': self.is_active  # Include is_active in the dictionary
         }
 
     def truncate_description(self, description, max_length=200):
@@ -100,7 +102,6 @@ class Course(db.Model):
         if description and len(description) > max_length:
             return description[:max_length] + '...'
         return description
-
 
 class Question(db.Model):
     __tablename__ = 'questions'

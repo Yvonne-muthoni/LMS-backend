@@ -1,8 +1,8 @@
-"""models change
+"""Add is_active to Course
 
-Revision ID: c00232701fb0
+Revision ID: 84e72b44462c
 Revises: 
-Create Date: 2024-08-10 23:55:39.229826
+Create Date: 2024-08-11 01:34:16.880197
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'c00232701fb0'
+revision = '84e72b44462c'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -26,6 +26,7 @@ def upgrade():
     sa.Column('video', sa.String(length=255), nullable=True),
     sa.Column('tech_stack', sa.String(length=255), nullable=True),
     sa.Column('what_you_will_learn', sa.Text(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('questions',
