@@ -85,7 +85,7 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-            "CallBackURL": "https://your-callback-url.com/callback",  # Replace with your callback URL
+            "CallBackURL": "https://your-callback-url.com/callback",  
             "AccountReference": f"Subscription{user.id}",
             "TransactionDesc": "Subscription payment"
         }
@@ -396,6 +396,14 @@ class QuestionsGet(Resource):
         except Exception as e:
             logging.error(f"Error fetching questions: {e}")
             return make_response({"message": "An error occurred"}, 500)
+@app.route('/courses/count', methods=['GET'])
+def get_course_count():
+    try:
+        count = Course.query.count()  
+        return jsonify({'count': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 api.add_resource(QuestionsPost, '/questions/<category>')
 
