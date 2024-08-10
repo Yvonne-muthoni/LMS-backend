@@ -1,9 +1,12 @@
+from dotenv import load_dotenv
+from sqlalchemy.exc import SQLAlchemyError
 
 import base64
 from datetime import datetime
 import os
-from flask import Flask, request, jsonify
-import requests
+from models import db, User, Subscription, Payment, Question,Course
+import logging
+from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
 from flask_restful import Resource, Api
 from models import db, User, Subscription, Payment
@@ -379,6 +382,37 @@ def add_question(category):
         return jsonify({"question": new_question.as_dict(), "message": "Question created successfully"}), 201
     except Exception as e:
         return jsonify({"message": "An error occurred", "details": str(e)}), 500
+
+class QuestionsGet(Resource):
+    valid_categories = ['HTML', 'CSS', 'javascript', 'react', 'redux', 'typescript', 'node', 'express', 'mongodb', 'sql', 'python', 'django', 'flask', 'ruby', 'rails', 'php', 'laravel', 'java', 'spring']
+    def get(self, category):
+        try:
+            if category not in valid_categories:
+                return make_response({"message": "Invalid category"}, 400)
+            
+            questions = Question.query.filter_by(category=category).all()
+            if not questions:
+                return make_response({"message": "No questions found for this category"}, 404)
+            
+            questions_list = [question.as_dict() for question in questions]
+            return make_response({"questions": questions_list}, 200)
+        except Exception as e:
+            logging.error(f"Error fetching questions: {e}")
+            return make_response({"message": "An error occurred"}, 500)
+
+@app.route('/courses/count', methods=['GET'])
+def count_active_courses():
+    try:
+        # Assuming there is an `is_active` field in the `Course` model
+        count = Course.query.filter_by(is_active=True).count()
+        return jsonify({"count": count}), 200
+    except SQLAlchemyError as e:
+        app.logger.error(f"Database error: {str(e)}")
+        return jsonify({"error": "Internal Server Error"}), 500
+    except Exception as e:
+        app.logger.error(f"General error: {str(e)}")
+        return jsonify({"error": "Internal Server Error"}), 500
+
 
 api.add_resource(QuestionsPost, '/questions/<category>')
 
