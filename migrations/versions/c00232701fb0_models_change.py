@@ -1,8 +1,8 @@
-"""upgrade questions
+"""models change
 
-Revision ID: 30ebfba0682e
+Revision ID: c00232701fb0
 Revises: 
-Create Date: 2024-08-08 21:49:34.211306
+Create Date: 2024-08-10 23:55:39.229826
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '30ebfba0682e'
+revision = 'c00232701fb0'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -51,15 +51,14 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('amount', sa.Float(), nullable=False),
-    sa.Column('phone_number', sa.String(length=15), nullable=False),
-    sa.Column('transaction_id', sa.String(length=100), nullable=True),
-    sa.Column('status', sa.String(length=50), nullable=True),
+    sa.Column('phone_number', sa.String(length=20), nullable=False),
+    sa.Column('transaction_id', sa.String(length=50), nullable=True),
+    sa.Column('status', sa.String(length=20), nullable=True),
     sa.Column('result_desc', sa.String(length=255), nullable=True),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('transaction_id')
+    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('subscriptions',
     sa.Column('id', sa.Integer(), nullable=False),

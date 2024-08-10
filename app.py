@@ -1,27 +1,34 @@
-
+from dotenv import load_dotenv
 import base64
 from datetime import datetime
 import os
-from flask import Flask, request, jsonify
-import requests
-from flask_migrate import Migrate
-from flask_restful import Resource, Api
-from models import db, User, Subscription, Payment
+from models import db, User, Subscription, Payment, Question
 import logging
-
-
+from flask import Flask, make_response, request, jsonify
+from flask_migrate import Migrate
+from flask_restful import Api, Resource
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_cors import CORS
+import requests
+import json
+from routes import course_bp
+load_dotenv()
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-db.init_app(app)
-migrate = Migrate(app, db)
-api = Api(app)
-
+app.config["JWT_SECRET_KEY"] = "super-secret"
 
 logging.basicConfig(level=logging.DEBUG)
 
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+migrate = Migrate(app, db)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
+db.init_app(app)
+api = Api(app)
 
 CONSUMER_KEY = os.getenv('CONSUMER_KEY')
 CONSUMER_SECRET = os.getenv('CONSUMER_SECRET')
@@ -31,22 +38,18 @@ PHONE_NUMBER = os.getenv('PHONE_NUMBER')
 
 def get_mpesa_access_token():
     api_url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
-    consumer_key = CONSUMER_KEY
-    consumer_secret = CONSUMER_SECRET
-    api_key = f"{consumer_key}:{consumer_secret}"
+    api_key = f"{CONSUMER_KEY}:{CONSUMER_SECRET}"
     headers = {
         'Authorization': 'Basic ' + base64.b64encode(api_key.encode()).decode()
     }
-    response = requests.get(api_url, headers=headers)
-    
-    logging.debug(f"Status Code: {response.status_code}")
-    logging.debug(f"Response Text: {response.text}")
-    
-    if response.status_code == 200:
+    try:
+        response = requests.get(api_url, headers=headers)
+        response.raise_for_status()
         json_response = response.json()
         return json_response['access_token']
-    else:
-        raise Exception(f"Error getting access token: {response.text}")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error getting access token: {e}")
+        raise Exception(f"Error getting access token: {e}")
 
 def generate_password(shortcode, passkey):
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -55,21 +58,13 @@ def generate_password(shortcode, passkey):
     return encoded_string.decode('utf-8'), timestamp
 
 class SubscriptionResource(Resource):
-    def initiate_mpesa_payment(self, payment_data):
-        user_id = payment_data.get('user_id')
-        phone_number = payment_data.get('phone_number')
-        amount = payment_data.get('amount')
-
-        user = User.query.get(user_id)
-        if not user:
-            return {'error': 'User not found'}, 404
-
-        
-        payment = Payment(user_id=user.id, amount=amount, phone_number=phone_number)
+    def initiate_mpesa_payment(self, user_id, amount, phone_number):
+        # Create payment record
+        payment = Payment(user_id=user_id, amount=amount, phone_number=phone_number)
         db.session.add(payment)
         db.session.commit()
 
-        
+        # Initiate M-Pesa payment
         access_token = get_mpesa_access_token()
         headers = {
             'Authorization': f'Bearer {access_token}',
@@ -85,8 +80,8 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-            "CallBackURL": "https://your-callback-url.com/callback",  
-            "AccountReference": f"Subscription{user.id}",
+            "CallBackURL": "https://229c-105-163-157-135.ngrok-free.app/callback",  # Replace with actual callback URL
+            "AccountReference": f"Subscription{user_id}",
             "TransactionDesc": "Subscription payment"
         }
 
@@ -96,9 +91,8 @@ class SubscriptionResource(Resource):
                 headers=headers,
                 json=payload
             )
-
-            logging.debug(f'M-Pesa API Response: {response.text}')
             response_data = response.json()
+            logging.debug(f"M-Pesa response: {response_data}")
         except requests.exceptions.RequestException as e:
             logging.error(f'Error calling M-Pesa API: {e}')
             return {'error': 'Failed to connect to M-Pesa API'}, 500
@@ -116,35 +110,36 @@ class SubscriptionResource(Resource):
 
     def post(self):
         data = request.get_json()
-
+        app.logger.debug(f"Subscription POST data: {data}")
+    
         user_id = data.get('user_id')
         if not user_id:
             return {'error': 'User ID is required'}, 400
-
+    
         user = User.query.get(user_id)
         if not user:
             return {'error': 'User not found'}, 404
-
+    
         amount = data.get('amount')
         if not amount:
             return {'error': 'Amount is required'}, 400
-
-        payment_data = {
-            'user_id': user.id,
-            'phone_number': data.get('phone_number'),
-            'amount': amount
-        }
-
-
-        payment_response = self.initiate_mpesa_payment(payment_data)
-
-        if payment_response[1] != 201:
-            return {'error': 'Failed to initiate payment'}, 400
-
-        
+    
+        phone_number = data.get('phone_number')
+        if not phone_number:
+            app.logger.error('Phone number is missing from the request data')
+            return {'error': 'Phone number is required'}, 400
+    
+        # Create subscription record before initiating payment
         subscription = Subscription(user_id=user.id, amount=amount)
         db.session.add(subscription)
         db.session.commit()
+
+        # Prepare payment data
+        payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
+
+        # Check the status code of the payment response
+        if payment_response[1] != 201:
+            return {'error': 'Failed to initiate payment'}, 400
 
         return {
             'message': 'Subscription created and payment initiated successfully',
@@ -155,33 +150,19 @@ class SubscriptionResource(Resource):
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
     data = request.get_json()
-
-
-    logging.debug(f'Callback Data: {data}')
-
     if not data:
-        logging.error("No data received in callback")
         return jsonify({"ResultCode": 1, "ResultDesc": "No data received"}), 400
-    
-    
+
     try:
         stk_callback = data['Body']['stkCallback']
         checkout_request_id = stk_callback['CheckoutRequestID']
         result_code = stk_callback['ResultCode']
         result_desc = stk_callback['ResultDesc']
     except KeyError as e:
-        logging.error(f'Missing key in callback data: {e}')
         return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
 
-    
-    logging.debug(f'CheckoutRequestID: {checkout_request_id}')
-    logging.debug(f'ResultCode: {result_code}')
-    logging.debug(f'ResultDesc: {result_desc}')
-
-    
     payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
     if payment:
-        logging.debug(f'Payment record found: {payment.id}')
         if result_code == 0:
             payment.status = 'completed'
         else:
@@ -189,39 +170,11 @@ def mpesa_callback():
         payment.result_desc = result_desc
         payment.timestamp = datetime.now()
         db.session.commit()
-        logging.debug(f'Payment status updated to: {payment.status}')
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
     else:
-        logging.error(f'Payment record not found for CheckoutRequestID: {checkout_request_id}')
         return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
 
-api.add_resource(SubscriptionResource, '/subscribe')
-
-from flask import Flask, make_response, request, jsonify
-from flask_migrate import Migrate
-from flask_restful import Api, Resource
-from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from models import db, User, Course, Question  
-from flask_cors import CORS
-import json
-import random
-import requests
-from routes import course_bp
-
-app = Flask(__name__)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config["JWT_SECRET_KEY"] = "super-secret"
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-migrate = Migrate(app, db)
-bcrypt = Bcrypt(app)
-jwt = JWTManager(app)
-db.init_app(app)
-api = Api(app)
-
+    
 class Users(Resource):
     @jwt_required()
     def get(self):
@@ -280,7 +233,6 @@ class VerifyToken(Resource):
 class Courses(Resource):
     def get(self):
         try:
-            print("GET /courses route accessed") 
             courses = Course.query.all()
             courses_list = [course.as_dict() for course in courses]
             return make_response({"courses": courses_list}, 200)
@@ -396,6 +348,7 @@ class QuestionsGet(Resource):
         except Exception as e:
             logging.error(f"Error fetching questions: {e}")
             return make_response({"message": "An error occurred"}, 500)
+        
 @app.route('/courses/count', methods=['GET'])
 def get_course_count():
     try:
@@ -411,10 +364,12 @@ api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
+api.add_resource(SubscriptionResource, '/subscribe')
  
 api.add_resource(QuestionsGet, '/questions/<category>')
 
 app.register_blueprint(course_bp, url_prefix='/courses') 
+
 
 
 if __name__ == '__main__':
