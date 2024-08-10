@@ -2,10 +2,11 @@
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
-from sqlalchemy.orm import validates
+from sqlalchemy.orm import validates, relationship
 import json
 import re
 
+db = SQLAlchemy()
 metadata = MetaData()
 db = SQLAlchemy(metadata=metadata)
 
@@ -19,8 +20,8 @@ class User(db.Model):
     role = db.Column(db.String(50), default='user')
     created_at = db.Column(db.DateTime, default=db.func.now())
 
-    subscriptions = db.relationship('Subscription', backref='user', lazy=True)
-    payments = db.relationship('Payment', backref='user', lazy=True)
+    subscriptions = db.relationship('Subscription', back_populates='user', lazy=True)
+    payments = db.relationship('Payment', back_populates='user', lazy=True)
 
     @validates('email')
     def validate_email(self, key, email):
@@ -40,6 +41,36 @@ class User(db.Model):
             "role": self.role,
             "created_at": str(self.created_at),
         }
+
+
+class Subscription(db.Model):
+    __tablename__ = 'subscriptions'  # Fixed table name
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', back_populates='subscriptions')  # Corrected
+
+    def __repr__(self):
+        return f'<Subscription id={self.id} user_id={self.user_id} amount={self.amount}>'
+
+
+class Payment(db.Model):
+    __tablename__ = 'payments'  # Fixed table name
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    phone_number = db.Column(db.String(20), nullable=False)
+    transaction_id = db.Column(db.String(50))
+    status = db.Column(db.String(20), default='pending')
+    result_desc = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', back_populates='payments')  # Corrected
 
 
 class Course(db.Model):
@@ -92,29 +123,4 @@ class Question(db.Model):
     def __repr__(self):
         return f"<Question {self.id}: {self.question_text}>"
     
-class Subscription(db.Model):
-    __tablename__ = 'subscriptions'
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<Subscription id={self.id} user_id={self.user_id} amount={self.amount}>'
-
-class Payment(db.Model):
-    __tablename__ = 'payments'
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    phone_number = db.Column(db.String(15), nullable=False)
-    transaction_id = db.Column(db.String(100), unique=True)
-    status = db.Column(db.String(50), default='pending')
-    result_desc = db.Column(db.String(255))
-    timestamp = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def __repr__(self):
-        return f'<Payment id={self.id} user_id={self.user_id} amount={self.amount} status={self.status}>'
