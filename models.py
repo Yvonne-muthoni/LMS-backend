@@ -77,7 +77,7 @@ class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     question_text = db.Column(db.Text, nullable=False)
     category = db.Column(db.String(50), nullable=False)  
-    options = db.Column(db.JSON, nullable=False)  # Use JSON type if SQLAlchemy version supports it
+    options = db.Column(db.JSON, nullable=False)  
     correct_answer = db.Column(db.String(255), nullable=False)
 
     def as_dict(self):
@@ -85,7 +85,7 @@ class Question(db.Model):
             'id': self.id,
             'questionText': self.question_text,
             'category': self.category,
-            'options': self.options,  # Directly return the JSON data
+            'options': self.options,  
             'correctAnswer': self.correct_answer
         }
 
