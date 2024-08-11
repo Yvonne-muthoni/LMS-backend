@@ -77,7 +77,7 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-            "CallBackURL": "https://4a49-105-163-1-175.ngrok-free.app/callback",  # Update to your actual callback URL
+            "CallBackURL": "https://edcc-105-163-1-175.ngrok-free.app/callback",  # Update to your actual callback URL
             "AccountReference": "SubscriptionPayment",
             "TransactionDesc": "Subscription payment"
         }
