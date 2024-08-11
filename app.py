@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
-
+import requests
 import base64
 from datetime import datetime
 import os
@@ -77,7 +77,7 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-            "CallBackURL": "https://edcc-105-163-1-175.ngrok-free.app/callback",  # Update to your actual callback URL
+            "CallBackURL": "https://c9d5-105-163-157-135.ngrok-free.app/callback",  # Update to your actual callback URL
             "AccountReference": "SubscriptionPayment",
             "TransactionDesc": "Subscription payment"
         }
@@ -195,6 +195,33 @@ class Users(Resource):
 
         access_token = create_access_token(identity=new_user.id)
         return make_response({"user": new_user.to_dict(), "access_token": access_token, "success": True, "message": "User has been created successfully"}, 201)
+
+@app.route('/callback', methods=['POST'])
+def mpesa_callback():
+    data = request.get_json()
+    if not data:
+        return jsonify({"ResultCode": 1, "ResultDesc": "No data received"}), 400
+
+    try:
+        stk_callback = data['Body']['stkCallback']
+        checkout_request_id = stk_callback['CheckoutRequestID']
+        result_code = stk_callback['ResultCode']
+        result_desc = stk_callback['ResultDesc']
+    except KeyError as e:
+        return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
+
+    payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
+    if payment:
+        if result_code == 0:
+            payment.status = 'completed'
+        else:
+            payment.status = 'failed'
+        payment.result_desc = result_desc
+        payment.timestamp = datetime.now()
+        db.session.commit()
+        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
+    else:
+        return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
 
 class Login(Resource):
     def post(self):
