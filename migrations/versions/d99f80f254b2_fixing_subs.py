@@ -1,8 +1,8 @@
-"""Add is_active to Course
+"""fixing subs
 
-Revision ID: 84e72b44462c
+Revision ID: d99f80f254b2
 Revises: 
-Create Date: 2024-08-11 01:34:16.880197
+Create Date: 2024-08-11 13:08:56.879855
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '84e72b44462c'
+revision = 'd99f80f254b2'
 down_revision = None
 branch_labels = None
 depends_on = None

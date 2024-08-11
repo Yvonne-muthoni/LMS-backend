@@ -20,8 +20,8 @@ class User(db.Model):
     role = db.Column(db.String(50), default='user')
     created_at = db.Column(db.DateTime, default=db.func.now())
 
-    subscriptions = db.relationship('Subscription', back_populates='user', lazy=True)
-    payments = db.relationship('Payment', back_populates='user', lazy=True)
+    subscriptions = db.relationship('Subscription', back_populates='user')
+    payments = db.relationship('Payment', back_populates='user')
 
     @validates('email')
     def validate_email(self, key, email):
@@ -44,22 +44,21 @@ class User(db.Model):
 
 
 class Subscription(db.Model):
-    __tablename__ = 'subscriptions'  # Fixed table name
+   __tablename__ = 'subscriptions'
+   id = db.Column(db.Integer, primary_key=True)
+   user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  # Fixed table name
+   amount = db.Column(db.Float, nullable=False)
+   created_at = db.Column(db.DateTime, default=datetime.utcnow)
+   
+   user = db.relationship('User', back_populates='subscriptions')  
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+   def __repr__(self):
+    return f'<Subscription id={self.id} user_id={self.user_id} amount={self.amount}>'
 
-    user = db.relationship('User', back_populates='subscriptions')  # Corrected
-
-    def __repr__(self):
-        return f'<Subscription id={self.id} user_id={self.user_id} amount={self.amount}>'
-
-
+   
+  
 class Payment(db.Model):
-    __tablename__ = 'payments'  # Fixed table name
-
+    __tablename__ = 'payments'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
@@ -70,7 +69,9 @@ class Payment(db.Model):
     timestamp = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    user = db.relationship('User', back_populates='payments')  # Corrected
+    user = db.relationship('User', back_populates='payments')
+
+
 
 
 class Course(db.Model):

@@ -8,35 +8,32 @@ from models import db, User, Subscription, Payment, Question,Course
 import logging
 from flask import Flask, make_response, request, jsonify
 from flask_migrate import Migrate
-from flask_restful import Api, Resource
-from flask_bcrypt import Bcrypt
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from flask_cors import CORS
-import requests
-import json
-from routes import course_bp
+from flask_restful import Resource, Api
+from models import db, User, Subscription, Payment
+import logging
+
 load_dotenv()
+
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["JWT_SECRET_KEY"] = "super-secret"
+
+db.init_app(app)
+migrate = Migrate(app, db)
+api = Api(app)
+
 
 logging.basicConfig(level=logging.DEBUG)
 
-CORS(app, resources={r"/*": {"origins": "*"}})
-
-migrate = Migrate(app, db)
-bcrypt = Bcrypt(app)
-jwt = JWTManager(app)
-db.init_app(app)
-api = Api(app)
 
 CONSUMER_KEY = os.getenv('CONSUMER_KEY')
 CONSUMER_SECRET = os.getenv('CONSUMER_SECRET')
 SHORTCODE = os.getenv('SHORTCODE')
 LIPA_NA_MPESA_ONLINE_PASSKEY = os.getenv('LIPA_NA_MPESA_ONLINE_PASSKEY')
 PHONE_NUMBER = os.getenv('PHONE_NUMBER')
+
+
 
 def get_mpesa_access_token():
     api_url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
@@ -47,8 +44,7 @@ def get_mpesa_access_token():
     try:
         response = requests.get(api_url, headers=headers)
         response.raise_for_status()
-        json_response = response.json()
-        return json_response['access_token']
+        return response.json()['access_token']
     except requests.exceptions.RequestException as e:
         logging.error(f"Error getting access token: {e}")
         raise Exception(f"Error getting access token: {e}")
@@ -56,8 +52,7 @@ def get_mpesa_access_token():
 def generate_password(shortcode, passkey):
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     data_to_encode = f"{shortcode}{passkey}{timestamp}"
-    encoded_string = base64.b64encode(data_to_encode.encode())
-    return encoded_string.decode('utf-8'), timestamp
+    return base64.b64encode(data_to_encode.encode()).decode('utf-8'), timestamp
 
 class SubscriptionResource(Resource):
     def initiate_mpesa_payment(self, user_id, amount, phone_number):
@@ -82,8 +77,8 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-            "CallBackURL": "https://229c-105-163-157-135.ngrok-free.app/callback",  # Replace with actual callback URL
-            "AccountReference": f"Subscription{user_id}",
+            "CallBackURL": "https://edcc-105-163-1-175.ngrok-free.app/callback",  # Update to your actual callback URL
+            "AccountReference": "SubscriptionPayment",
             "TransactionDesc": "Subscription payment"
         }
 
@@ -98,9 +93,6 @@ class SubscriptionResource(Resource):
         except requests.exceptions.RequestException as e:
             logging.error(f'Error calling M-Pesa API: {e}')
             return {'error': 'Failed to connect to M-Pesa API'}, 500
-        except ValueError:
-            logging.error(f'Invalid JSON response: {response.text}')
-            return {'error': 'Invalid response from M-Pesa API'}, 500
 
         if response_data.get('ResponseCode') == '0':
             payment.transaction_id = response_data['CheckoutRequestID']
@@ -136,11 +128,13 @@ class SubscriptionResource(Resource):
         db.session.add(subscription)
         db.session.commit()
 
-        # Prepare payment data
+        # Initiate M-Pesa payment
         payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
 
         # Check the status code of the payment response
         if payment_response[1] != 201:
+
+            print (payment_response)
             return {'error': 'Failed to initiate payment'}, 400
 
         return {
@@ -149,34 +143,33 @@ class SubscriptionResource(Resource):
             'payment_response': payment_response
         }, 201
 
-@app.route('/callback', methods=['POST'])
-def mpesa_callback():
-    data = request.get_json()
-    if not data:
-        return jsonify({"ResultCode": 1, "ResultDesc": "No data received"}), 400
 
-    try:
-        stk_callback = data['Body']['stkCallback']
-        checkout_request_id = stk_callback['CheckoutRequestID']
-        result_code = stk_callback['ResultCode']
-        result_desc = stk_callback['ResultDesc']
-    except KeyError as e:
-        return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
 
-    payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
-    if payment:
-        if result_code == 0:
-            payment.status = 'completed'
-        else:
-            payment.status = 'failed'
-        payment.result_desc = result_desc
-        payment.timestamp = datetime.now()
-        db.session.commit()
-        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
-    else:
-        return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
+from flask import Flask, make_response, request, jsonify
+from flask_migrate import Migrate
+from flask_restful import Api, Resource
+from flask_bcrypt import Bcrypt
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from models import db, User, Course, Question  
+from flask_cors import CORS
+import json
+import random
+import requests
+from routes import course_bp
 
-    
+app = Flask(__name__)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config["JWT_SECRET_KEY"] = "super-secret"
+CORS(app, resources={r"/*": {"origins": "*"}})
+
+migrate = Migrate(app, db)
+bcrypt = Bcrypt(app)
+jwt = JWTManager(app)
+db.init_app(app)
+api = Api(app)
+
 class Users(Resource):
     @jwt_required()
     def get(self):
@@ -235,6 +228,7 @@ class VerifyToken(Resource):
 class Courses(Resource):
     def get(self):
         try:
+            print("GET /courses route accessed") 
             courses = Course.query.all()
             courses_list = [course.as_dict() for course in courses]
             return make_response({"courses": courses_list}, 200)
@@ -371,12 +365,11 @@ api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
-api.add_resource(SubscriptionResource, '/subscribe')
+api.add_resource(SubscriptionResource,'/subscribe')
+
  
-api.add_resource(QuestionsGet, '/questions/<category>')
 
 app.register_blueprint(course_bp, url_prefix='/courses') 
-
 
 
 if __name__ == '__main__':
