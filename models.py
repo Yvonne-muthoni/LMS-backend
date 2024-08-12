@@ -71,7 +71,18 @@ class Payment(db.Model):
 
     user = db.relationship('User', back_populates='payments')
 
-
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'amount': self.amount,
+            'phone_number': self.phone_number,
+            'transaction_id': self.transaction_id,
+            'status': self.status,
+            'result_desc': self.result_desc,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
 
 class Course(db.Model):

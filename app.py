@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
 import requests
 import base64
+
 from datetime import datetime
 import os
 from models import db, User, Subscription, Payment, Question,Course
@@ -11,13 +12,15 @@ from flask_migrate import Migrate
 from flask_restful import Resource, Api
 from models import db, User, Subscription, Payment
 import logging
+import os
+
+app = Flask(__name__)
 
 load_dotenv()
 
-
-app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///app.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -77,7 +80,7 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-            "CallBackURL": "https://c9d5-105-163-157-135.ngrok-free.app/callback",  # Update to your actual callback URL
+            "CallBackURL": "https://f341-105-163-157-135.ngrok-free.app/callback",  # Update to your actual callback URL
             "AccountReference": "SubscriptionPayment",
             "TransactionDesc": "Subscription payment"
         }
@@ -142,6 +145,34 @@ class SubscriptionResource(Resource):
             'subscription_id': subscription.id,
             'payment_response': payment_response
         }, 201
+    
+@app.route('/callback', methods=['POST'])
+def mpesa_callback():
+    data = request.get_json()
+    if not data:
+        return jsonify({"ResultCode": 1, "ResultDesc": "No data received"}), 400
+
+    try:
+        stk_callback = data['Body']['stkCallback']
+        checkout_request_id = stk_callback['CheckoutRequestID']
+        result_code = stk_callback['ResultCode']
+        result_desc = stk_callback['ResultDesc']
+    except KeyError as e:
+        return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
+
+    payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
+    if payment:
+        if result_code == 0:
+            payment.status = 'completed'
+        else:
+            payment.status = 'failed'
+        payment.result_desc = result_desc
+        payment.timestamp = datetime.now()
+        db.session.commit()
+        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
+    else:
+        return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
+
 
 
 
@@ -169,6 +200,7 @@ bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 db.init_app(app)
 api = Api(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 class Users(Resource):
     @jwt_required()
@@ -195,33 +227,6 @@ class Users(Resource):
 
         access_token = create_access_token(identity=new_user.id)
         return make_response({"user": new_user.to_dict(), "access_token": access_token, "success": True, "message": "User has been created successfully"}, 201)
-
-@app.route('/callback', methods=['POST'])
-def mpesa_callback():
-    data = request.get_json()
-    if not data:
-        return jsonify({"ResultCode": 1, "ResultDesc": "No data received"}), 400
-
-    try:
-        stk_callback = data['Body']['stkCallback']
-        checkout_request_id = stk_callback['CheckoutRequestID']
-        result_code = stk_callback['ResultCode']
-        result_desc = stk_callback['ResultDesc']
-    except KeyError as e:
-        return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
-
-    payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
-    if payment:
-        if result_code == 0:
-            payment.status = 'completed'
-        else:
-            payment.status = 'failed'
-        payment.result_desc = result_desc
-        payment.timestamp = datetime.now()
-        db.session.commit()
-        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
-    else:
-        return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
 
 class Login(Resource):
     def post(self):
@@ -401,3 +406,4 @@ app.register_blueprint(course_bp, url_prefix='/courses')
 
 if __name__ == '__main__':
     app.run(debug=True)
+    CORS(app)
