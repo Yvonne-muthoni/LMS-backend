@@ -143,6 +143,16 @@ class SubscriptionResource(Resource):
             'payment_response': payment_response
         }, 201
 
+class PaymentSummaryResource(Resource):
+    def get(self):
+        try:
+            total_paid = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
+            return {'total_paid': total_paid}, 200
+        except Exception as e:
+            app.logger.error(f"Error fetching payment summary: {e}")
+            return {'error': 'Failed to fetch payment summary'}, 500
+
+
 
 
 from flask import Flask, make_response, request, jsonify
@@ -224,6 +234,8 @@ class VerifyToken(Resource):
                 "message": "Token is valid"
             }, 200)
         return make_response({"message": "Invalid token"}, 401)
+
+
 
 class Courses(Resource):
     def get(self):
@@ -365,10 +377,8 @@ api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
 api.add_resource(SubscriptionResource,'/subscribe')
-
 api.add_resource(QuestionsGet, '/questions/<category>')
 app.register_blueprint(course_bp, url_prefix='/courses') 
-
-
+api.add_resource(PaymentSummaryResource, '/payment-summary')
 if __name__ == '__main__':
     app.run(debug=True)
