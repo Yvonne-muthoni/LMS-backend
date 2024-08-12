@@ -268,8 +268,8 @@ class Courses(Resource):
             return make_response({"message": "An error occurred"}, 500)
 
 valid_categories = [
-    'HTML', 'CSS', 'JavaScript', 'React', 'Redux', 'TypeScript', 'Node.js', 'Express',
-    'MongoDB', 'SQL', 'Python', 'Django', 'Flask', 'Ruby', 'Rails', 'PHP', 'Laravel', 'Java', 'Spring'
+    'html', 'css', 'javascript', 'react', 'redux', 'typescript', 'node.js', 'express',
+    'mongoDB', 'sql', 'python', 'django', 'flask', 'ruby', 'rails', 'php', 'laravel', 'java', 'spring'
 ]
 
 class QuestionsPost(Resource):
