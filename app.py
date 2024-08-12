@@ -344,7 +344,6 @@ class QuestionsGet(Resource):
         except Exception as e:
             logging.error(f"Error fetching questions: {e}")
             return make_response({"message": "An error occurred"}, 500)
-
 @app.route('/courses/count', methods=['GET'])
 def count_active_courses():
     try:
@@ -367,8 +366,7 @@ api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
 api.add_resource(SubscriptionResource,'/subscribe')
 
- 
-
+api.add_resource(QuestionsGet, '/questions/<category>')
 app.register_blueprint(course_bp, url_prefix='/courses') 
 
 
