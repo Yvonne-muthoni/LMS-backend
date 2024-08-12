@@ -1,14 +1,13 @@
 [[source]]
-url = "https://pypi.org/simple"
+url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
 [packages]
-sqlalchemy = "*"
 flask = "*"
 flask-sqlalchemy = "*"
-flask-restful = "*"
 flask-migrate = "*"
+flask-restful = "*"
 sqlalchemy-serializer = "*"
 flask-bcrypt = "*"
 flask-jwt-extended = "*"
@@ -16,8 +15,10 @@ flask-cors = "*"
 gunicorn = "*"
 flasgger = "*"
 pytest = "*"
+paypalrestsdk = "*"
+requests = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.10"
+python_version = "3.12.3"
