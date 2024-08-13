@@ -84,7 +84,7 @@ class Course(db.Model):
     video = db.Column(db.String(255), nullable=True)
     tech_stack = db.Column(db.String(255), nullable=True)
     what_you_will_learn = db.Column(db.Text, nullable=True)
-    is_active = db.Column(db.Boolean, default=True, nullable=False)  # New field
+    is_active = db.Column(db.Boolean, default=True, nullable=False)  # Active courses are not archived
 
     def as_dict(self):
         return {
@@ -103,6 +103,16 @@ class Course(db.Model):
         if description and len(description) > max_length:
             return description[:max_length] + '...'
         return description
+
+    def archive(self):
+        """Archive the course by setting is_active to False."""
+        self.is_active = False
+        db.session.commit()
+
+    def unarchive(self):
+        """Unarchive the course by setting is_active to True."""
+        self.is_active = True
+        db.session.commit()
 
 class Question(db.Model):
     __tablename__ = 'questions'
