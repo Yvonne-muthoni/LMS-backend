@@ -67,6 +67,7 @@ class Payment(db.Model):
     status = db.Column(db.String(20), default='pending')
     result_desc = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime)
+    mpesa_receipt_number = db.Column(db.String(100), nullable=True)  # Add this column
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', back_populates='payments')
