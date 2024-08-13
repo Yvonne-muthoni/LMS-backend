@@ -1,5 +1,11 @@
 
 
+
+
+from dotenv import load_dotenv
+from sqlalchemy.exc import SQLAlchemyError
+import requests
+
 import base64
 from datetime import datetime
 import os
@@ -87,8 +93,12 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
+
             #  callback URL
             "CallBackURL": "https://c9d5-105-163-157-135.ngrok-free.app/callback",
+
+            "CallBackURL": "https://c9d5-105-163-157-135.ngrok-free.app/callback",  # Update to your actual callback URL
+
             "AccountReference": "SubscriptionPayment",
             "TransactionDesc": "Subscription payment"
         }
@@ -193,6 +203,8 @@ class Users(Resource):
         return make_response({"user": new_user.to_dict(), "access_token": access_token, "success": True, "message": "User has been created successfully"}, 201)
 
 
+
+
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
     data = request.get_json()
@@ -207,8 +219,12 @@ def mpesa_callback():
     except KeyError as e:
         return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
 
+
     payment = Payment.query.filter_by(
         transaction_id=checkout_request_id).first()
+
+    payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
+
     if payment:
         if result_code == 0:
             payment.status = 'completed'
