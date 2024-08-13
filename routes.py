@@ -1,16 +1,19 @@
-# 
+
 from flask import Blueprint, request, jsonify
-from app import db
-from models import Course
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from models import db, Course, User, Question
+from flask_bcrypt import Bcrypt
 import json
 import random
 import requests
+import os
+bcrypt = Bcrypt()
 
 course_bp = Blueprint('courses', __name__)
 
 def get_youtube_video_details(video_url):
     video_id = video_url.split('v=')[-1]
-    api_key = 'AIzaSyDFmJtpuBlqxxhGqW66BDXEi5kvhWSd87c'
+    api_url=  os.getenv('api_url')
     api_url = f'https://www.googleapis.com/youtube/v3/videos?part=snippet&id={video_id}&key={api_key}'    
     response = requests.get(api_url)
     if response.status_code == 200:
@@ -83,23 +86,20 @@ def update_course(id):
             course.title = video_details['title']
             course.description = video_details['description']
             course.image = video_details['thumbnail']
-    
+
+    course.title = data.get('title', course.title)
+    course.description = data.get('description', course.description)
+    course.image = data.get('image', course.image)
     course.video = video_url
-    course.tech_stack = ','.join(data.get('techStack', course.tech_stack.split(',')))
-    course.what_you_will_learn = json.dumps(data.get('whatYouWillLearn', json.loads(course.what_you_will_learn)))
+    course.tech_stack = ','.join(generate_tech_stack())
+    course.what_you_will_learn = json.dumps(generate_learning_outcomes())
     
     db.session.commit()
     return jsonify(course.as_dict())
 
 @course_bp.route('/<int:id>', methods=['DELETE'])
 def delete_course(id):
-    print(f"Received request to delete course with ID: {id}")  
-    course = Course.query.get(id)
-    if not course:
-        print(f"Course with ID {id} not found.")  
-        return jsonify({"error": "Course not found"}), 404
-    
+    course = Course.query.get_or_404(id)
     db.session.delete(course)
     db.session.commit()
-    print(f"Course with ID {id} successfully deleted.")  
-    return '', 204
+    return jsonify({'message': 'Course deleted successfully'})
