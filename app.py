@@ -422,4 +422,4 @@ app.register_blueprint(course_bp, url_prefix='/courses')
 api.add_resource(PaymentSummaryResource, '/payment-summary')
 if __name__ == '__main__':
     app.run(debug=True)
-    CORS(app)
+    
