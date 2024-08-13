@@ -1,20 +1,13 @@
-
-
-
-
 from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
 import requests
-
 import base64
 from datetime import datetime
 import os
 import logging
 import json
-import requests
 
 from flask import Flask, make_response, request, jsonify
-from sqlalchemy.exc import SQLAlchemyError
 from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
@@ -24,28 +17,34 @@ from flask_cors import CORS
 from models import db, User, Course, Question, Subscription, Payment
 from routes import course_bp
 
+# Load environment variables
+load_dotenv()
+
+# Initialize Flask app
 app = Flask(__name__)
 
+# Configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config["JWT_SECRET_KEY"] = "super-secret"
+app.config["JWT_SECRET_KEY"] = "super-secret"  # Change this to a more secure key
 
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Initialize extensions
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 migrate = Migrate(app, db)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 db.init_app(app)
 api = Api(app)
 
+# Set up logging
 logging.basicConfig(level=logging.DEBUG)
 
-
+# Environment variables for M-Pesa API
 CONSUMER_KEY = os.getenv('CONSUMER_KEY')
 CONSUMER_SECRET = os.getenv('CONSUMER_SECRET')
 SHORTCODE = os.getenv('SHORTCODE')
 LIPA_NA_MPESA_ONLINE_PASSKEY = os.getenv('LIPA_NA_MPESA_ONLINE_PASSKEY')
 PHONE_NUMBER = os.getenv('PHONE_NUMBER')
-
 
 def get_mpesa_access_token():
     api_url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
@@ -61,18 +60,15 @@ def get_mpesa_access_token():
         logging.error(f"Error getting access token: {e}")
         raise Exception(f"Error getting access token: {e}")
 
-
 def generate_password(shortcode, passkey):
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     data_to_encode = f"{shortcode}{passkey}{timestamp}"
     return base64.b64encode(data_to_encode.encode()).decode('utf-8'), timestamp
 
-
 class SubscriptionResource(Resource):
     def initiate_mpesa_payment(self, user_id, amount, phone_number):
         # Create payment record
-        payment = Payment(user_id=user_id, amount=amount,
-                          phone_number=phone_number)
+        payment = Payment(user_id=user_id, amount=amount, phone_number=phone_number)
         db.session.add(payment)
         db.session.commit()
 
@@ -82,8 +78,7 @@ class SubscriptionResource(Resource):
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
-        password, timestamp = generate_password(
-            SHORTCODE, LIPA_NA_MPESA_ONLINE_PASSKEY)
+        password, timestamp = generate_password(SHORTCODE, LIPA_NA_MPESA_ONLINE_PASSKEY)
         payload = {
             "BusinessShortCode": SHORTCODE,
             "Password": password,
@@ -93,12 +88,7 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-
-            #  callback URL
             "CallBackURL": "https://c9d5-105-163-157-135.ngrok-free.app/callback",
-
-            "CallBackURL": "https://c9d5-105-163-157-135.ngrok-free.app/callback",  # Update to your actual callback URL
-
             "AccountReference": "SubscriptionPayment",
             "TransactionDesc": "Subscription payment"
         }
@@ -150,13 +140,9 @@ class SubscriptionResource(Resource):
         db.session.commit()
 
         # Initiate M-Pesa payment
-        payment_response = self.initiate_mpesa_payment(
-            user_id, amount, phone_number)
+        payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
 
-        # Check the status code of the payment response
         if payment_response[1] != 201:
-
-            print(payment_response)
             return {'error': 'Failed to initiate payment'}, 400
 
         return {
@@ -164,6 +150,7 @@ class SubscriptionResource(Resource):
             'subscription_id': subscription.id,
             'payment_response': payment_response
         }, 201
+
 class PaymentSummaryResource(Resource):
     def get(self):
         try:
@@ -172,8 +159,6 @@ class PaymentSummaryResource(Resource):
         except Exception as e:
             app.logger.error(f"Error fetching payment summary: {e}")
             return {'error': 'Failed to fetch payment summary'}, 500
-
-
 
 class Users(Resource):
     @jwt_required()
@@ -191,8 +176,7 @@ class Users(Resource):
         new_user = User(
             username=request.json.get("username"),
             email=request.json.get("email"),
-            password=bcrypt.generate_password_hash(
-                request.json.get("password")).decode('utf-8'),
+            password=bcrypt.generate_password_hash(request.json.get("password")).decode('utf-8'),
             role=request.json.get("role", "user")
         )
 
@@ -201,9 +185,6 @@ class Users(Resource):
 
         access_token = create_access_token(identity=new_user.id)
         return make_response({"user": new_user.to_dict(), "access_token": access_token, "success": True, "message": "User has been created successfully"}, 201)
-
-
-
 
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
@@ -219,10 +200,6 @@ def mpesa_callback():
     except KeyError as e:
         return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
 
-
-    payment = Payment.query.filter_by(
-        transaction_id=checkout_request_id).first()
-
     payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
 
     if payment:
@@ -236,7 +213,6 @@ def mpesa_callback():
         return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
     else:
         return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
-
 
 class Login(Resource):
     def post(self):
@@ -254,7 +230,6 @@ class Login(Resource):
             }, 200)
         return make_response({"message": "Invalid credentials"}, 401)
 
-
 class VerifyToken(Resource):
     @jwt_required()
     def post(self):
@@ -268,16 +243,14 @@ class VerifyToken(Resource):
             }, 200)
         return make_response({"message": "Invalid token"}, 401)
 
-
 class Courses(Resource):
     def get(self):
         try:
-            print("GET /courses route accessed")
             courses = Course.query.all()
             courses_list = [course.as_dict() for course in courses]
             return make_response({"courses": courses_list}, 200)
         except Exception as e:
-            print(f"Error fetching courses: {e}")
+            app.logger.error(f"Error fetching courses: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
     def post(self):
@@ -295,7 +268,7 @@ class Courses(Resource):
             db.session.commit()
             return make_response({"course": new_course.as_dict(), "message": "Course created successfully"}, 201)
         except Exception as e:
-            print(f"Error creating course: {e}")
+            app.logger.error(f"Error creating course: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
     def delete(self):
@@ -308,18 +281,15 @@ class Courses(Resource):
                 return make_response({"message": "Course deleted successfully"}, 200)
             return make_response({"message": "Course not found"}, 404)
         except Exception as e:
-            print(f"Error deleting course: {e}")
+            app.logger.error(f"Error deleting course: {e}")
             return make_response({"message": "An error occurred"}, 500)
-
 
 valid_categories = [
     'html', 'css', 'javascript', 'react', 'redux', 'typescript', 'node.js', 'express',
     'mongoDB', 'sql', 'python', 'django', 'flask', 'ruby', 'rails', 'php', 'laravel', 'java', 'spring'
 ]
 
-
 class QuestionsPost(Resource):
-
     def post(self, category):
         try:
             if category not in valid_categories:
@@ -349,7 +319,6 @@ class QuestionsPost(Resource):
             logging.error(f"Error creating question: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-
 @app.route('/questions/<category>', methods=['POST'])
 def add_question(category):
     if category not in valid_categories:
@@ -374,14 +343,13 @@ def add_question(category):
     except Exception as e:
         return jsonify({"message": "An error occurred", "details": str(e)}), 500
 
-
 class QuestionsGet(Resource):
     valid_categories = ['HTML', 'CSS', 'javascript', 'react', 'redux', 'typescript', 'node', 'express',
                         'mongodb', 'sql', 'python', 'django', 'flask', 'ruby', 'rails', 'php', 'laravel', 'java', 'spring']
 
     def get(self, category):
         try:
-            if category not in valid_categories:
+            if category not in self.valid_categories:
                 return make_response({"message": "Invalid category"}, 400)
 
             questions = Question.query.filter_by(category=category).all()
@@ -394,11 +362,9 @@ class QuestionsGet(Resource):
             logging.error(f"Error fetching questions: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
-
 @app.route('/courses/count', methods=['GET'])
 def count_active_courses():
     try:
-        
         count = Course.query.filter_by(is_active=True).count()
         return jsonify({"count": count}), 200
     except SQLAlchemyError as e:
@@ -408,16 +374,17 @@ def count_active_courses():
         app.logger.error(f"General error: {str(e)}")
         return jsonify({"error": "Internal Server Error"}), 500
 
-
-
-
+# Register resources
 api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
 api.add_resource(VerifyToken, '/verify-token')
 api.add_resource(Courses, '/courses')
-api.add_resource(SubscriptionResource,'/subscribe')
+api.add_resource(SubscriptionResource, '/subscribe')
 api.add_resource(QuestionsGet, '/questions/<category>')
-app.register_blueprint(course_bp, url_prefix='/courses') 
 api.add_resource(PaymentSummaryResource, '/payment-summary')
+
+# Register blueprints
+app.register_blueprint(course_bp, url_prefix='/courses')
+
 if __name__ == '__main__':
     app.run(debug=True)
