@@ -1,4 +1,3 @@
-from models import db, User, Course, Question
 import base64
 from datetime import datetime
 import os
@@ -13,13 +12,9 @@ from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_cors import CORS
-from dotenv import load_dotenv
 
 from models import db, User, Course, Question, Subscription, Payment
 from routes import course_bp
-
-load_dotenv()
-
 
 app = Flask(__name__)
 

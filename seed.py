@@ -1,25 +1,23 @@
 import re
 import json
-from app import create_app, db
+from app import app, db
 from models import Course
 
-app = create_app()
 
 def get_youtube_thumbnail_url(video_url):
-    # Regex to extract YouTube video ID from different URL 
-    youtube_id_match = re.search(r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|v\/|embed\/|user\/\S+\/\S+\/|embed\/|\S+\/\S+\/|v\/)|youtu\.be\/|youtube\.com\/(?:playlist\?list=|embed\/|v\/|watch\?v=))([a-zA-Z0-9_-]{11})', video_url)
+    # Regex to extract YouTube video ID from different URL
+    youtube_id_match = re.search(
+        r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|v\/|embed\/|user\/\S+\/\S+\/|embed\/|\S+\/\S+\/|v\/)|youtu\.be\/|youtube\.com\/(?:playlist\?list=|embed\/|v\/|watch\?v=))([a-zA-Z0-9_-]{11})', video_url)
     if youtube_id_match:
         video_id = youtube_id_match.group(1)
         return f"https://img.youtube.com/vi/{video_id}/maxresdefault.jpg"
     return None
 
 
-
 def seed_database():
     with app.app_context():
         db.create_all()
-        
-    
+
         courses = [
             {
                 "title": "Introduction to Python",
@@ -66,7 +64,7 @@ def seed_database():
                 ])
             },
 
-                        {
+            {
                 "title": "Mastering JavaScript",
                 "description": "Dive deep into JavaScript and learn how to build dynamic, responsive web applications.",
                 "video": "https://www.youtube.com/watch?v=PkZNo7MFNFg",
@@ -78,14 +76,14 @@ def seed_database():
                 ])
             },
         ]
-        
+
         # Insert data
         for course_data in courses:
             thumbnail_url = get_youtube_thumbnail_url(course_data["video"])
             if not thumbnail_url:
                 # Fallback if thumbnail URL extraction fails
                 thumbnail_url = "https://example.com/image/default_thumbnail.jpg"
-            
+
             course = Course(
                 title=course_data["title"],
                 description=course_data["description"],
@@ -95,8 +93,9 @@ def seed_database():
                 what_you_will_learn=course_data["what_you_will_learn"]
             )
             db.session.add(course)
-        
+
         db.session.commit()
+
 
 if __name__ == "__main__":
     seed_database()

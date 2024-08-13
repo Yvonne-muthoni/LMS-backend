@@ -17,6 +17,7 @@ flasgger = "*"
 pytest = "*"
 paypalrestsdk = "*"
 requests = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
