@@ -1,9 +1,9 @@
 import re
 import json
-from app import create_app, db
+from app import app, db
 from models import Course
 
-app = create_app()
+
 
 def get_youtube_thumbnail_url(video_url):
     # Regex to extract YouTube video ID from different URL 

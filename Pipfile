@@ -17,8 +17,9 @@ flasgger = "*"
 pytest = "*"
 paypalrestsdk = "*"
 requests = "*"
+python-dotenv = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.12.3"
+python_version = "3.10.12"
