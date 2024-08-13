@@ -1,8 +1,8 @@
-"""fixing subs
+"""testing
 
-Revision ID: d99f80f254b2
+Revision ID: cdfca4043183
 Revises: 
-Create Date: 2024-08-11 13:08:56.879855
+Create Date: 2024-08-12 16:28:46.880500
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd99f80f254b2'
+revision = 'cdfca4043183'
 down_revision = None
 branch_labels = None
 depends_on = None
