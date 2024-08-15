@@ -175,6 +175,7 @@ class PaymentSummaryResource(Resource):
 
 
 
+
 class Users(Resource):
     @jwt_required()
     def get(self):
@@ -191,8 +192,7 @@ class Users(Resource):
         new_user = User(
             username=request.json.get("username"),
             email=request.json.get("email"),
-            password=bcrypt.generate_password_hash(
-                request.json.get("password")).decode('utf-8'),
+            password=bcrypt.generate_password_hash(request.json.get("password")).decode('utf-8'),
             role=request.json.get("role", "user")
         )
 
