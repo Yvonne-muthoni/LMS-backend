@@ -1,12 +1,9 @@
-
-
-
-
 from dotenv import load_dotenv
 from sqlalchemy.exc import SQLAlchemyError
 import requests
 
 import base64
+
 from datetime import datetime
 import os
 import logging
@@ -25,6 +22,7 @@ from models import db, User, Course, Question, Subscription, Payment
 from routes import course_bp
 
 app = Flask(__name__)
+load_dotenv()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -59,31 +57,26 @@ def get_mpesa_access_token():
         return response.json()['access_token']
     except requests.exceptions.RequestException as e:
         logging.error(f"Error getting access token: {e}")
-        raise Exception(f"Error getting access token: {e}")
-
+        raise
 
 def generate_password(shortcode, passkey):
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     data_to_encode = f"{shortcode}{passkey}{timestamp}"
     return base64.b64encode(data_to_encode.encode()).decode('utf-8'), timestamp
 
-
 class SubscriptionResource(Resource):
     def initiate_mpesa_payment(self, user_id, amount, phone_number):
-        # Create payment record
-        payment = Payment(user_id=user_id, amount=amount,
-                          phone_number=phone_number)
+        # Create payment record without course_id
+        payment = Payment(user_id=user_id, amount=amount, phone_number=phone_number)
         db.session.add(payment)
         db.session.commit()
 
-        # Initiate M-Pesa payment
         access_token = get_mpesa_access_token()
         headers = {
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
-        password, timestamp = generate_password(
-            SHORTCODE, LIPA_NA_MPESA_ONLINE_PASSKEY)
+        password, timestamp = generate_password(SHORTCODE, LIPA_NA_MPESA_ONLINE_PASSKEY)
         payload = {
             "BusinessShortCode": SHORTCODE,
             "Password": password,
@@ -93,12 +86,7 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-
-            #  callback URL
-            "CallBackURL": "https://c9d5-105-163-157-135.ngrok-free.app/callback",
-
-            "CallBackURL": "https://c9d5-105-163-157-135.ngrok-free.app/callback",  # Update to your actual callback URL
-
+            "CallBackURL": "https://d127-105-163-157-135.ngrok-free.app/callback",  # Update with your domain or ngrok URL
             "AccountReference": "SubscriptionPayment",
             "TransactionDesc": "Subscription payment"
         }
@@ -119,7 +107,7 @@ class SubscriptionResource(Resource):
             payment.transaction_id = response_data['CheckoutRequestID']
             payment.status = 'initiated'
             db.session.commit()
-            return {'message': 'Payment initiated successfully'}, 201
+            return {'message': 'Payment initiated successfully, waiting for callback'}, 201
         else:
             return {'error': 'Failed to initiate payment'}, 400
 
@@ -141,29 +129,78 @@ class SubscriptionResource(Resource):
 
         phone_number = data.get('phone_number')
         if not phone_number:
-            app.logger.error('Phone number is missing from the request data')
             return {'error': 'Phone number is required'}, 400
 
-        # Create subscription record before initiating payment
+        # Create subscription record without course_id
         subscription = Subscription(user_id=user.id, amount=amount)
         db.session.add(subscription)
         db.session.commit()
 
         # Initiate M-Pesa payment
-        payment_response = self.initiate_mpesa_payment(
-            user_id, amount, phone_number)
+        payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
+        return payment_response
 
-        # Check the status code of the payment response
-        if payment_response[1] != 201:
+    def post(self):
+        data = request.get_json()
+        app.logger.debug(f"Subscription POST data: {data}")
 
-            print(payment_response)
-            return {'error': 'Failed to initiate payment'}, 400
+        user_id = data.get('user_id')
+        if not user_id:
+            return {'error': 'User ID is required'}, 400
 
-        return {
-            'message': 'Subscription created and payment initiated successfully',
-            'subscription_id': subscription.id,
-            'payment_response': payment_response
-        }, 201
+        user = User.query.get(user_id)
+        if not user:
+            return {'error': 'User not found'}, 404
+
+        amount = data.get('amount')
+        if not amount:
+            return {'error': 'Amount is required'}, 400
+
+        phone_number = data.get('phone_number')
+        if not phone_number:
+            return {'error': 'Phone number is required'}, 400
+
+        # Create subscription record
+        subscription = Subscription(user_id=user.id, amount=amount)
+        db.session.add(subscription)
+        db.session.commit()
+
+        # Initiate M-Pesa payment
+        payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
+        return payment_response
+@app.route('/callback', methods=['POST'])
+def mpesa_callback():
+    data = request.get_json()
+
+    # Extract necessary data from the callback request
+    transaction_id = data['Body']['stkCallback']['CheckoutRequestID']
+    result_code = data['Body']['stkCallback']['ResultCode']
+    amount = next(item['Value'] for item in data['Body']['stkCallback']['CallbackMetadata']['Item'] if item['Name'] == 'Amount')
+
+    # Find the payment record
+    payment = Payment.query.filter_by(transaction_id=transaction_id).first()
+    if not payment:
+        return {'error': 'Payment record not found'}, 404
+
+    if result_code == 0:  # Success code from M-Pesa
+        payment.status = 'completed'
+        # Update the course_id if available
+        # For demonstration, assuming course_id is passed in the callback
+        course_id = get_course_id_from_payment_data(data)
+        if course_id:
+            payment.course_id = course_id
+        db.session.commit()
+        return {'message': 'Payment confirmed and course assigned'}, 200
+    else:
+        payment.status = 'failed'
+        db.session.commit()
+        return {'error': 'Payment failed'}, 400
+
+def get_course_id_from_payment_data(data):
+    # Implement logic to extract course_id from the callback data if available
+    # This will depend on how you pass or store the course_id
+    return None
+
 class PaymentSummaryResource(Resource):
     def get(self):
         try:
@@ -172,9 +209,6 @@ class PaymentSummaryResource(Resource):
         except Exception as e:
             app.logger.error(f"Error fetching payment summary: {e}")
             return {'error': 'Failed to fetch payment summary'}, 500
-
-
-
 
 class Users(Resource):
     @jwt_required()
@@ -201,41 +235,6 @@ class Users(Resource):
 
         access_token = create_access_token(identity=new_user.id)
         return make_response({"user": new_user.to_dict(), "access_token": access_token, "success": True, "message": "User has been created successfully"}, 201)
-
-
-
-
-@app.route('/callback', methods=['POST'])
-def mpesa_callback():
-    data = request.get_json()
-    if not data:
-        return jsonify({"ResultCode": 1, "ResultDesc": "No data received"}), 400
-
-    try:
-        stk_callback = data['Body']['stkCallback']
-        checkout_request_id = stk_callback['CheckoutRequestID']
-        result_code = stk_callback['ResultCode']
-        result_desc = stk_callback['ResultDesc']
-    except KeyError as e:
-        return jsonify({"ResultCode": 1, "ResultDesc": "Invalid data format"}), 400
-
-
-    payment = Payment.query.filter_by(
-        transaction_id=checkout_request_id).first()
-
-    payment = Payment.query.filter_by(transaction_id=checkout_request_id).first()
-
-    if payment:
-        if result_code == 0:
-            payment.status = 'completed'
-        else:
-            payment.status = 'failed'
-        payment.result_desc = result_desc
-        payment.timestamp = datetime.now()
-        db.session.commit()
-        return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"}), 200
-    else:
-        return jsonify({"ResultCode": 1, "ResultDesc": "Payment record not found"}), 404
 
 
 class Login(Resource):
@@ -317,7 +316,6 @@ valid_categories = [
     'html', 'css', 'javascript', 'react', 'redux', 'typescript', 'node.js', 'express',
     'mongoDB', 'sql', 'python', 'django', 'flask', 'ruby', 'rails', 'php', 'laravel', 'java', 'spring'
 ]
-
 
 class QuestionsPost(Resource):
 
@@ -429,7 +427,46 @@ def count_active_courses():
     except Exception as e:
         app.logger.error(f"General error: {str(e)}")
         return jsonify({"error": "Internal Server Error"}), 500
+    
 
+
+
+
+@app.route('/courses/pro', methods=['POST'])
+def create_pro_course():
+    try:
+        data = request.json
+        new_course = Course(
+            title=data.get("title"),
+            description=data.get("description"),
+            image=data.get("image"),
+            video=data.get("video"),
+            tech_stack=json.dumps(data.get("tech_stack")),
+            what_you_will_learn=json.dumps(data.get("what_you_will_learn")),
+            is_active=data.get("is_active", True),
+            requires_subscription=data.get("requires_subscription", False)
+        )
+        db.session.add(new_course)
+        db.session.commit()
+
+        # Debugging: Print the new course
+        print(f"Created course: {new_course.as_dict()}")
+
+        return jsonify({"course": new_course.as_dict(), "message": "Course created successfully"}), 201
+    except Exception as e:
+        print(f"Error creating course: {e}")
+        return jsonify({"message": "An error occurred"}), 500
+
+@app.route('/courses/pro', methods=['GET'])
+def get_pro_courses():
+    try:
+        # Retrieve all pro courses that require a subscription
+        courses = Course.query.filter_by(requires_subscription=True).all()
+        courses_list = [course.as_dict() for course in courses]
+        return jsonify({"courses": courses_list}), 200
+    except Exception as e:
+        app.logger.error(f"Error in get_pro_courses: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 
@@ -441,5 +478,7 @@ api.add_resource(SubscriptionResource,'/subscribe')
 api.add_resource(QuestionsGet, '/questions/<category>')
 app.register_blueprint(course_bp, url_prefix='/courses') 
 api.add_resource(PaymentSummaryResource, '/payment-summary')
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
+    
