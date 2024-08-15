@@ -24,7 +24,7 @@ from routes import course_bp
 app = Flask(__name__)
 load_dotenv()
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = "super-secret"
 
@@ -86,7 +86,7 @@ class SubscriptionResource(Resource):
             "PartyA": phone_number,
             "PartyB": SHORTCODE,
             "PhoneNumber": phone_number,
-            "CallBackURL": "https://d127-105-163-157-135.ngrok-free.app/callback",  # Update with your domain or ngrok URL
+            "CallBackURL": "https://ad0a-105-163-157-135.ngrok-free.app/callback",  # Update with your domain or ngrok URL
             "AccountReference": "SubscriptionPayment",
             "TransactionDesc": "Subscription payment"
         }
@@ -139,35 +139,39 @@ class SubscriptionResource(Resource):
         # Initiate M-Pesa payment
         payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
         return payment_response
+def post(self):
+    data = request.get_json()
+    app.logger.debug(f"Subscription POST data: {data}")
 
-    def post(self):
-        data = request.get_json()
-        app.logger.debug(f"Subscription POST data: {data}")
+    user_id = data.get('user_id')
+    if not user_id:
+        app.logger.error('User ID is required')
+        return {'error': 'User ID is required'}, 400
 
-        user_id = data.get('user_id')
-        if not user_id:
-            return {'error': 'User ID is required'}, 400
+    user = User.query.get(user_id)
+    if not user:
+        app.logger.error('User not found')
+        return {'error': 'User not found'}, 404
 
-        user = User.query.get(user_id)
-        if not user:
-            return {'error': 'User not found'}, 404
+    amount = data.get('amount')
+    if not amount:
+        app.logger.error('Amount is required')
+        return {'error': 'Amount is required'}, 400
 
-        amount = data.get('amount')
-        if not amount:
-            return {'error': 'Amount is required'}, 400
+    phone_number = data.get('phone_number')
+    if not phone_number:
+        app.logger.error('Phone number is required')
+        return {'error': 'Phone number is required'}, 400
 
-        phone_number = data.get('phone_number')
-        if not phone_number:
-            return {'error': 'Phone number is required'}, 400
+    # Create subscription record
+    subscription = Subscription(user_id=user.id, amount=amount)
+    db.session.add(subscription)
+    db.session.commit()
 
-        # Create subscription record
-        subscription = Subscription(user_id=user.id, amount=amount)
-        db.session.add(subscription)
-        db.session.commit()
+    # Initiate M-Pesa payment
+    payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
+    return payment_response
 
-        # Initiate M-Pesa payment
-        payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
-        return payment_response
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
     data = request.get_json()
