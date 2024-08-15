@@ -1,8 +1,0 @@
-Flask
-Flask-Migrate
-Flask-RESTful
-Flask-Bcrypt
-Flask-JWT-Extended
-Flask-Cors
-Flask-SQLAlchemy
-gunicorn

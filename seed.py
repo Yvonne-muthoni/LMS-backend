@@ -1,8 +1,3 @@
-
-
-
-
-
 import re
 import json
 from app import app, db
@@ -21,6 +16,7 @@ def seed_database():
         
         # Seed Courses
         courses = [
+            # Existing courses
             {
                 "title": "Introduction to Python",
                 "description": "Learn the basics of Python programming, including syntax, data structures, and basic algorithms.",
@@ -119,6 +115,29 @@ def seed_database():
                     "Managing state in Flutter applications",
                     "Integrating Firebase for backend services"
                 ])
+            },
+            # New pro courses
+            {
+                "title": "Professional Web Development Bootcamp",
+                "description": "An advanced bootcamp covering modern web development practices and tools.",
+                "video": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                "tech_stack": "React,Node.js,Express,GraphQL",
+                "what_you_will_learn": json.dumps([
+                    "Advanced React techniques and best practices",
+                    "Building RESTful APIs with Express",
+                    "GraphQL for modern web applications"
+                ])
+            },
+            {
+                "title": "Deep Learning with TensorFlow",
+                "description": "An in-depth course on deep learning and neural networks using TensorFlow.",
+                "video": "https://www.youtube.com/watch?v=aeGekm8N3O4",
+                "tech_stack": "TensorFlow,Keras",
+                "what_you_will_learn": json.dumps([
+                    "Building deep learning models with TensorFlow",
+                    "Neural network architecture and optimization",
+                    "Applying deep learning to real-world problems"
+                ])
             }
         ]
         
@@ -139,7 +158,7 @@ def seed_database():
         
         # Seed Questions
         questions = [
-            # HTML
+            # Existing questions
             {
                 "question_text": "What is the correct HTML element for inserting a line break?",
                 "category": "html",
@@ -162,7 +181,6 @@ def seed_database():
                 ],
                 "correct_answer": "<style>"
             },
-            # CSS
             {
                 "question_text": "How do you change the font size of an element in CSS?",
                 "category": "css",
@@ -185,7 +203,6 @@ def seed_database():
                 ],
                 "correct_answer": "color"
             },
-            # JavaScript
             {
                 "question_text": "How do you declare a variable in JavaScript?",
                 "category": "javascript",
@@ -203,59 +220,91 @@ def seed_database():
                 "options": [
                     "console.write()",
                     "console.log()",
-                    "log.console()",
-                    "print.console()"
+                    "print.console()",
+                    "log.console()"
                 ],
                 "correct_answer": "console.log()"
             },
-            # React
             {
-                "question_text": "What method is used to update the state in a React component?",
+                "question_text": "What is the correct syntax for a function declaration in JavaScript?",
+                "category": "javascript",
+                "options": [
+                    "function myFunction() {}",
+                    "function:myFunction() {}",
+                    "function myFunction {}",
+                    "myFunction() function {}"
+                ],
+                "correct_answer": "function myFunction() {}"
+            },
+            {
+                "question_text": "Which of the following is used to select an HTML element by its ID in JavaScript?",
+                "category": "javascript",
+                "options": [
+                    "document.getElementById()",
+                    "document.querySelector()",
+                    "document.getElementByClass()",
+                    "document.select()"
+                ],
+                "correct_answer": "document.getElementById()"
+            },
+            {
+                "question_text": "How do you create a comment in a JavaScript file?",
+                "category": "javascript",
+                "options": [
+                    "// this is a comment",
+                    "<!-- this is a comment -->",
+                    "/* this is a comment */",
+                    "# this is a comment"
+                ],
+                "correct_answer": "// this is a comment"
+            },
+            # New questions
+            {
+                "question_text": "What is the purpose of React Hooks?",
                 "category": "react",
                 "options": [
-                    "this.setState()",
-                    "this.updateState()",
-                    "this.modifyState()",
-                    "this.changeState()"
+                    "Manage component state and side effects",
+                    "Create new HTML elements",
+                    "Style components",
+                    "Handle form submissions"
                 ],
-                "correct_answer": "this.setState()"
+                "correct_answer": "Manage component state and side effects"
             },
             {
-                "question_text": "Which hook is used to handle side effects in a React functional component?",
+                "question_text": "What is the use of Redux in a React application?",
                 "category": "react",
                 "options": [
-                    "useState",
-                    "useEffect",
-                    "useContext",
-                    "useReducer"
+                    "Manage application state",
+                    "Style components",
+                    "Create new components",
+                    "Handle routing"
                 ],
-                "correct_answer": "useEffect"
-            },
-            # Redux
-            {
-                "question_text": "What is the purpose of Redux middleware?",
-                "category": "redux",
-                "options": [
-                    "To handle async actions",
-                    "To manage local component state",
-                    "To update the store directly",
-                    "To trigger actions"
-                ],
-                "correct_answer": "To handle async actions"
+                "correct_answer": "Manage application state"
             },
             {
-                "question_text": "Which function is used to create a Redux store?",
-                "category": "redux",
+                "question_text": "What is the default export of a module in Node.js?",
+                "category": "node",
                 "options": [
-                    "createStore()",
-                    "configureStore()",
-                    "initializeStore()",
-                    "createReduxStore()"
+                    "module.exports",
+                    "exports.default",
+                    "default.exports",
+                    "module.export"
                 ],
-                "correct_answer": "createStore()"
+                "correct_answer": "module.exports"
+            },
+            {
+                "question_text": "How do you connect a Node.js application to a MongoDB database?",
+                "category": "node",
+                "options": [
+                    "Using the mongoose library",
+                    "Using the pg library",
+                    "Using the mysql library",
+                    "Using the sqlite3 library"
+                ],
+                "correct_answer": "Using the mongoose library"
             }
         ]
-
+        
         for question_data in questions:
             question = Question(
                 question_text=question_data["question_text"],
@@ -266,6 +315,6 @@ def seed_database():
             db.session.add(question)
         
         db.session.commit()
+        print("Database seeded with new courses and questions.")
 
-if __name__ == "__main__":
-    seed_database()
+seed_database()

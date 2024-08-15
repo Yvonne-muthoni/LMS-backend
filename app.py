@@ -66,7 +66,6 @@ def generate_password(shortcode, passkey):
 
 class SubscriptionResource(Resource):
     def initiate_mpesa_payment(self, user_id, amount, phone_number):
-        # Create payment record without course_id
         payment = Payment(user_id=user_id, amount=amount, phone_number=phone_number)
         db.session.add(payment)
         db.session.commit()
@@ -131,12 +130,10 @@ class SubscriptionResource(Resource):
         if not phone_number:
             return {'error': 'Phone number is required'}, 400
 
-        # Create subscription record without course_id
         subscription = Subscription(user_id=user.id, amount=amount)
         db.session.add(subscription)
         db.session.commit()
 
-        # Initiate M-Pesa payment
         payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
         return payment_response
 def post(self):
@@ -163,47 +160,33 @@ def post(self):
         app.logger.error('Phone number is required')
         return {'error': 'Phone number is required'}, 400
 
-    # Create subscription record
     subscription = Subscription(user_id=user.id, amount=amount)
     db.session.add(subscription)
     db.session.commit()
 
-    # Initiate M-Pesa payment
     payment_response = self.initiate_mpesa_payment(user_id, amount, phone_number)
     return payment_response
 
 @app.route('/callback', methods=['POST'])
 def mpesa_callback():
-    data = request.get_json()
+    try:
+        data = request.json
 
-    # Extract necessary data from the callback request
-    transaction_id = data['Body']['stkCallback']['CheckoutRequestID']
-    result_code = data['Body']['stkCallback']['ResultCode']
-    amount = next(item['Value'] for item in data['Body']['stkCallback']['CallbackMetadata']['Item'] if item['Name'] == 'Amount')
+        callback_metadata = data.get('Body', {}).get('stkCallback', {}).get('CallbackMetadata', {})
+        items = callback_metadata.get('Item', [])
 
-    # Find the payment record
-    payment = Payment.query.filter_by(transaction_id=transaction_id).first()
-    if not payment:
-        return {'error': 'Payment record not found'}, 404
+        if not items:
+            return jsonify({"error": "CallbackMetadata or Item missing"}), 400
 
-    if result_code == 0:  # Success code from M-Pesa
-        payment.status = 'completed'
-        # Update the course_id if available
-        # For demonstration, assuming course_id is passed in the callback
-        course_id = get_course_id_from_payment_data(data)
-        if course_id:
-            payment.course_id = course_id
-        db.session.commit()
-        return {'message': 'Payment confirmed and course assigned'}, 200
-    else:
-        payment.status = 'failed'
-        db.session.commit()
-        return {'error': 'Payment failed'}, 400
+        amount = next((item['Value'] for item in items if item['Name'] == 'Amount'), None)
+        if amount is None:
+            return jsonify({"error": "'Amount' not found in CallbackMetadata"}), 400
 
-def get_course_id_from_payment_data(data):
-    # Implement logic to extract course_id from the callback data if available
-    # This will depend on how you pass or store the course_id
-    return None
+        return jsonify({"amount": amount}), 200
+
+    except Exception as e:
+        print(f"Error processing callback: {e}")
+        return jsonify({"error": "Internal server error"}), 500
 
 class PaymentSummaryResource(Resource):
     def get(self):
@@ -431,47 +414,63 @@ def count_active_courses():
     except Exception as e:
         app.logger.error(f"General error: {str(e)}")
         return jsonify({"error": "Internal Server Error"}), 500
-    
 
 
-
-
-@app.route('/courses/pro', methods=['POST'])
-def create_pro_course():
+@app.route('/courses/pro/<int:course_id>', methods=['GET'])
+def get_pro_course(course_id):
     try:
-        data = request.json
-        new_course = Course(
-            title=data.get("title"),
-            description=data.get("description"),
-            image=data.get("image"),
-            video=data.get("video"),
-            tech_stack=json.dumps(data.get("tech_stack")),
-            what_you_will_learn=json.dumps(data.get("what_you_will_learn")),
-            is_active=data.get("is_active", True),
-            requires_subscription=data.get("requires_subscription", False)
-        )
-        db.session.add(new_course)
-        db.session.commit()
-
-        # Debugging: Print the new course
-        print(f"Created course: {new_course.as_dict()}")
-
-        return jsonify({"course": new_course.as_dict(), "message": "Course created successfully"}), 201
+        course = Course.query.get(course_id)
+        if not course:
+            return jsonify({"message": "Course not found"}), 404
+        
+        course_data = {
+            "title": course.title,
+            "description": course.description,
+            "video": course.video,
+            "image": course.image,
+            "techStack": json.loads(course.tech_stack) if course.tech_stack else [],
+                        "whatYouWillLearn": json.loads(course.what_you_will_learn) if course.what_you_will_learn else [],
+            "is_active": course.is_active,
+            "requires_subscription": course.requires_subscription
+        }
+        return jsonify({"course": course_data}), 200
     except Exception as e:
-        print(f"Error creating course: {e}")
-        return jsonify({"message": "An error occurred"}), 500
+        app.logger.error(f"Error retrieving course: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 
 @app.route('/courses/pro', methods=['GET'])
 def get_pro_courses():
     try:
-        # Retrieve all pro courses that require a subscription
-        courses = Course.query.filter_by(requires_subscription=True).all()
-        courses_list = [course.as_dict() for course in courses]
+        pro_courses = Course.query.filter_by(requires_subscription=True).all()
+        app.logger.debug(f"Found {len(pro_courses)} pro courses.")
+
+        courses_list = [course.as_dict() for course in pro_courses]
         return jsonify({"courses": courses_list}), 200
     except Exception as e:
-        app.logger.error(f"Error in get_pro_courses: {str(e)}")
+        app.logger.error(f"Error retrieving pro courses: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@course_bp.route('/pro/<int:id>', methods=['GET'])
+def get_pro_course(id):
+    try:
+        course = Course.query.filter_by(id=id, requires_subscription=True).first_or_404()
+        return jsonify(course.as_dict())
+    except Exception as e:
+        app.logger.error(f"Error retrieving pro course with ID {id}: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@course_bp.route('/pro/<int:id>', methods=['DELETE'])
+def delete_pro_course(id):
+    try:
+        course = Course.query.filter_by(id=id, requires_subscription=True).first_or_404()
+        db.session.delete(course)
+        db.session.commit()
+        return jsonify({"message": "Pro course deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting pro course with ID {id}: {str(e)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 
 api.add_resource(Users, '/users')
@@ -482,6 +481,7 @@ api.add_resource(SubscriptionResource,'/subscribe')
 api.add_resource(QuestionsGet, '/questions/<category>')
 app.register_blueprint(course_bp, url_prefix='/courses') 
 api.add_resource(PaymentSummaryResource, '/payment-summary')
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
