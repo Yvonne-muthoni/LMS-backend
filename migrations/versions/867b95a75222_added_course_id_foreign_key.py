@@ -1,8 +1,8 @@
-"""testing
+"""Added course_id foreign key
 
-Revision ID: cdfca4043183
+Revision ID: 867b95a75222
 Revises: 
-Create Date: 2024-08-12 16:28:46.880500
+Create Date: 2024-08-14 10:21:42.078064
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'cdfca4043183'
+revision = '867b95a75222'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -27,6 +27,7 @@ def upgrade():
     sa.Column('tech_stack', sa.String(length=255), nullable=True),
     sa.Column('what_you_will_learn', sa.Text(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('requires_subscription', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('questions',
@@ -57,6 +58,7 @@ def upgrade():
     sa.Column('status', sa.String(length=20), nullable=True),
     sa.Column('result_desc', sa.String(length=255), nullable=True),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('mpesa_receipt_number', sa.String(length=100), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -64,8 +66,10 @@ def upgrade():
     op.create_table('subscriptions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('course_id', sa.Integer(), nullable=False),
     sa.Column('amount', sa.Float(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
