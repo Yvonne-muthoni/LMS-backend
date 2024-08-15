@@ -120,6 +120,16 @@ class Course(db.Model):
             return description[:max_length] + '...'
         return description
 
+    def archive(self):
+        """Archive the course by setting is_active to False."""
+        self.is_active = False
+        db.session.commit()
+
+    def unarchive(self):
+        """Unarchive the course by setting is_active to True."""
+        self.is_active = True
+        db.session.commit()
+
 class Question(db.Model):
     __tablename__ = 'questions'
 

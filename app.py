@@ -226,8 +226,7 @@ class Users(Resource):
         new_user = User(
             username=request.json.get("username"),
             email=request.json.get("email"),
-            password=bcrypt.generate_password_hash(
-                request.json.get("password")).decode('utf-8'),
+            password=bcrypt.generate_password_hash(request.json.get("password")).decode('utf-8'),
             role=request.json.get("role", "user")
         )
 
@@ -310,6 +309,7 @@ class Courses(Resource):
         except Exception as e:
             print(f"Error deleting course: {e}")
             return make_response({"message": "An error occurred"}, 500)
+        
 
 
 valid_categories = [
@@ -393,6 +393,27 @@ class QuestionsGet(Resource):
             logging.error(f"Error fetching questions: {e}")
             return make_response({"message": "An error occurred"}, 500)
 
+
+@app.route('/courses/<int:id>/archive', methods=['PUT'])
+def archive_course(id):
+    course = Course.query.get_or_404(id)
+    course.archive()
+    return jsonify({"message": f"Course with ID {id} has been archived."}), 200
+
+@app.route('/courses/<int:id>/unarchive', methods=['PUT'])
+def unarchive_course(id):
+    course = Course.query.get_or_404(id)
+    course.unarchive()
+    return jsonify({"message": f"Course with ID {id} has been unarchived."}), 200
+
+@app.route('/courses', methods=['GET'])
+def get_courses():
+    active_only = request.args.get('active_only', 'true').lower() == 'true'
+    if active_only:
+        courses = Course.query.filter_by(is_active=True).all()
+    else:
+        courses = Course.query.all()
+    return jsonify([course.as_dict() for course in courses])
 
 @app.route('/courses/count', methods=['GET'])
 def count_active_courses():
