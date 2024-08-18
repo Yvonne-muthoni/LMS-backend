@@ -42,20 +42,21 @@ class User(db.Model):
 
 
 class Subscription(db.Model):
-   __tablename__ = 'subscriptions'
-   id = db.Column(db.Integer, primary_key=True)
-   user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)  
-   course_id = db.Column(db.Integer, db.ForeignKey('courses.id'), nullable=True)  
-   amount = db.Column(db.Float, nullable=False)
-   created_at = db.Column(db.DateTime, default=datetime.utcnow)
-   
-   user = db.relationship('User', back_populates='subscriptions')  
-   course = db.relationship('Course', back_populates='subscriptions')
+    __tablename__ = 'subscriptions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    pro_course_id = db.Column(db.Integer, db.ForeignKey('pro_courses.id'), nullable=True)  # Foreign key to ProCourse
+    amount = db.Column(db.Float, nullable=False)
+    video_limit = db.Column(db.Integer, default=0)  # New field for video limit
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    user = db.relationship('User', back_populates='subscriptions')
+    pro_course = db.relationship('ProCourse', back_populates='subscriptions')  # Relationship to ProCourse
 
-   def __repr__(self):
-    return f'<Subscription id={self.id} user_id={self.user_id} amount={self.amount}>'
+    def __repr__(self):
+        return f'<Subscription id={self.id} user_id={self.user_id} amount={self.amount}>'
 
-   
   
 class Payment(db.Model):
     __tablename__ = 'payments'
@@ -97,9 +98,7 @@ class Course(db.Model):
     tech_stack = db.Column(db.String(255), nullable=True)
     what_you_will_learn = db.Column(db.Text, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)  # New field
-    requires_subscription = db.Column(db.Boolean, default=False)  # New field
 
-    subscriptions = db.relationship('Subscription', back_populates='course')
 
     def as_dict(self):
         return {
@@ -111,7 +110,6 @@ class Course(db.Model):
             'techStack': self.tech_stack.split(',') if self.tech_stack else [],
             'whatYouWillLearn': json.loads(self.what_you_will_learn) if self.what_you_will_learn else [],
             'is_active': self.is_active , # Include is_active in the dictionary
-            'requires_subscription': self.requires_subscription  # Include in the dictionary
         }
 
     def truncate_description(self, description, max_length=200):
@@ -150,5 +148,60 @@ class Question(db.Model):
 
     def __repr__(self):
         return f"<Question {self.id}: {self.question_text}>"
+    
+class ProCourse(db.Model):
+    __tablename__ = 'pro_courses'
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    image = db.Column(db.String(255), nullable=True)
+    video = db.Column(db.String(255), nullable=True)
+    tech_stack = db.Column(db.String(255), nullable=True)
+    what_you_will_learn = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    requires_subscription = db.Column(db.Boolean, default=True)
+
+    subscriptions = db.relationship('Subscription', back_populates='pro_course')
+
+    def as_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'description': self.truncate_description(self.description),
+            'image': self.image,
+            'video': self.video,
+            'techStack': self.tech_stack.split(',') if self.tech_stack else [],
+            'whatYouWillLearn': json.loads(self.what_you_will_learn) if self.what_you_will_learn else [],
+            'is_active': self.is_active,
+            'requires_subscription': self.requires_subscription
+        }
+
+    @staticmethod
+    def truncate_description(description, length=100):
+        if description and len(description) > length:
+            return description[:length] + '...'
+        return description
+
+class QuizResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    category = db.Column(db.String(50), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    total_questions = db.Column(db.Integer, nullable=False)
+    answers = db.Column(db.JSON, nullable=False)  # Store answers as JSON
+    date_taken = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def as_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "category": self.category,
+            "score": self.score,
+            "total_questions": self.total_questions,
+            "answers": self.answers,
+            "date_taken": self.date_taken
+        }
+
     
 
