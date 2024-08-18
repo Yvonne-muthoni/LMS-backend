@@ -1,8 +1,3 @@
-
-
-
-
-
 import re
 import json
 from app import app, db
@@ -21,6 +16,7 @@ def seed_database():
         
         # Seed Courses
         courses = [
+            # Existing courses
             {
                 "title": "Introduction to Python",
                 "description": "Learn the basics of Python programming, including syntax, data structures, and basic algorithms.",
@@ -119,6 +115,29 @@ def seed_database():
                     "Managing state in Flutter applications",
                     "Integrating Firebase for backend services"
                 ])
+            },
+            # New pro courses
+            {
+                "title": "Professional Web Development Bootcamp",
+                "description": "An advanced bootcamp covering modern web development practices and tools.",
+                "video": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                "tech_stack": "React,Node.js,Express,GraphQL",
+                "what_you_will_learn": json.dumps([
+                    "Advanced React techniques and best practices",
+                    "Building RESTful APIs with Express",
+                    "GraphQL for modern web applications"
+                ])
+            },
+            {
+                "title": "Deep Learning with TensorFlow",
+                "description": "An in-depth course on deep learning and neural networks using TensorFlow.",
+                "video": "https://www.youtube.com/watch?v=aeGekm8N3O4",
+                "tech_stack": "TensorFlow,Keras",
+                "what_you_will_learn": json.dumps([
+                    "Building deep learning models with TensorFlow",
+                    "Neural network architecture and optimization",
+                    "Applying deep learning to real-world problems"
+                ])
             }
         ]
         
@@ -138,6 +157,7 @@ def seed_database():
             db.session.add(course)
         
         # Seed Questions
+            
         questions = [
             # HTML
             {
@@ -250,11 +270,334 @@ def seed_database():
                     "createStore()",
                     "configureStore()",
                     "initializeStore()",
-                    "createReduxStore()"
+                    "setupStore()"
                 ],
                 "correct_answer": "createStore()"
+            },
+            # TypeScript
+            {
+                "question_text": "How do you define a type for a variable in TypeScript?",
+                "category": "typescript",
+                "options": [
+                    "let myVar: type;",
+                    "let myVar: Type;",
+                    "var myVar:type;",
+                    "var myVar:Type;"
+                ],
+                "correct_answer": "let myVar: type;"
+            },
+            {
+                "question_text": "Which keyword is used to define a class in TypeScript?",
+                "category": "typescript",
+                "options": [
+                    "class",
+                    "define",
+                    "type",
+                    "interface"
+                ],
+                "correct_answer": "class"
+            },
+            # Node.js
+            {
+                "question_text": "How do you install a package using npm in Node.js?",
+                "category": "node.js",
+                "options": [
+                    "npm install package-name",
+                    "node install package-name",
+                    "install package-name",
+                    "npm add package-name"
+                ],
+                "correct_answer": "npm install package-name"
+            },
+            {
+                "question_text": "Which built-in Node.js module allows you to handle HTTP requests?",
+                "category": "node.js",
+                "options": [
+                    "http",
+                    "fs",
+                    "url",
+                    "path"
+                ],
+                "correct_answer": "http"
+            },
+            # Express
+            {
+                "question_text": "How do you create an Express application?",
+                "category": "express",
+                "options": [
+                    "const app = express();",
+                    "const app = new Express();",
+                    "const app = createExpress();",
+                    "const app = express.create();"
+                ],
+                "correct_answer": "const app = express();"
+            },
+            {
+                "question_text": "Which method is used to define a route in Express?",
+                "category": "express",
+                "options": [
+                    "app.get()",
+                    "app.route()",
+                    "app.use()",
+                    "app.post()"
+                ],
+                "correct_answer": "app.get()"
+            },
+            # MongoDB
+            {
+                "question_text": "How do you connect to a MongoDB database using the native driver?",
+                "category": "mongodb",
+                "options": [
+                    "MongoClient.connect()",
+                    "MongoDB.connect()",
+                    "Mongoose.connect()",
+                    "DB.connect()"
+                ],
+                "correct_answer": "MongoClient.connect()"
+            },
+            {
+                "question_text": "Which method is used to insert a document into a MongoDB collection?",
+                "category": "mongodb",
+                "options": [
+                    "insertOne()",
+                    "addDocument()",
+                    "create()",
+                    "put()"
+                ],
+                "correct_answer": "insertOne()"
+            },
+            # SQL
+            {
+                "question_text": "How do you retrieve all columns from a table named 'users' in SQL?",
+                "category": "sql",
+                "options": [
+                    "SELECT * FROM users;",
+                    "GET * FROM users;",
+                    "SHOW * FROM users;",
+                    "FETCH * FROM users;"
+                ],
+                "correct_answer": "SELECT * FROM users;"
+            },
+            {
+                "question_text": "Which SQL clause is used to filter records?",
+                "category": "sql",
+                "options": [
+                    "WHERE",
+                    "FILTER",
+                    "HAVING",
+                    "SELECT"
+                ],
+                "correct_answer": "WHERE"
+            },
+            # Python
+            {
+                "question_text": "How do you define a function in Python?",
+                "category": "python",
+                "options": [
+                    "def function_name():",
+                    "function function_name():",
+                    "define function_name():",
+                    "func function_name():"
+                ],
+                "correct_answer": "def function_name():"
+            },
+            {
+                "question_text": "Which keyword is used to handle exceptions in Python?",
+                "category": "python",
+                "options": [
+                    "try/except",
+                    "catch",
+                    "handle",
+                    "error"
+                ],
+                "correct_answer": "try/except"
+            },
+            # Django
+            {
+                "question_text": "How do you create a new Django project?",
+                "category": "django",
+                "options": [
+                    "django-admin startproject projectname",
+                    "django new project projectname",
+                    "django create project projectname",
+                    "django-admin create project projectname"
+                ],
+                "correct_answer": "django-admin startproject projectname"
+            },
+            {
+                "question_text": "Which file is used to define models in Django?",
+                "category": "django",
+                "options": [
+                    "models.py",
+                    "views.py",
+                    "urls.py",
+                    "admin.py"
+                ],
+                "correct_answer": "models.py"
+            },
+            # Flask
+            {
+                "question_text": "How do you start a Flask application?",
+                "category": "flask",
+                "options": [
+                    "flask run",
+                    "python app.py",
+                    "flask start",
+                    "python flask.py"
+                ],
+                "correct_answer": "flask run"
+            },
+            {
+                "question_text": "Which decorator is used to define a route in Flask?",
+                "category": "flask",
+                "options": [
+                    "@app.route()",
+                    "@route()",
+                    "@app.endpoint()",
+                    "@url()"
+                ],
+                "correct_answer": "@app.route()"
+            },
+            # Ruby
+            {
+                "question_text": "How do you define a class in Ruby?",
+                "category": "ruby",
+                "options": [
+                    "class ClassName",
+                    "define ClassName",
+                    "new ClassName",
+                    "create ClassName"
+                ],
+                "correct_answer": "class ClassName"
+            },
+            {
+                "question_text": "How do you output text to the console in Ruby?",
+                "category": "ruby",
+                "options": [
+                    "puts",
+                    "print",
+                    "echo",
+                    "display"
+                ],
+                "correct_answer": "puts"
+            },
+            # Rails
+            {
+                "question_text": "How do you generate a new Rails model?",
+                "category": "rails",
+                "options": [
+                    "rails generate model ModelName",
+                    "rails create model ModelName",
+                    "rails new model ModelName",
+                    "rails model generate ModelName"
+                ],
+                "correct_answer": "rails generate model ModelName"
+            },
+            {
+                "question_text": "What command is used to start a Rails server?",
+                "category": "rails",
+                "options": [
+                    "rails server",
+                    "rails start",
+                    "server start",
+                    "rails run"
+                ],
+                "correct_answer": "rails server"
+            },
+            # PHP
+            {
+                "question_text": "Which PHP function is used to include another PHP file?",
+                "category": "php",
+                "options": [
+                    "include",
+                    "require",
+                    "import",
+                    "load"
+                ],
+                "correct_answer": "include"
+            },
+            {
+                "question_text": "How do you start a PHP session?",
+                "category": "php",
+                "options": [
+                    "session_start()",
+                    "start_session()",
+                    "init_session()",
+                    "begin_session()"
+                ],
+                "correct_answer": "session_start()"
+            },
+            # Laravel
+            {
+                "question_text": "How do you create a new Laravel project?",
+                "category": "laravel",
+                "options": [
+                    "composer create-project --prefer-dist laravel/laravel projectname",
+                    "laravel new projectname",
+                    "php artisan create project projectname",
+                    "php create-project laravel projectname"
+                ],
+                "correct_answer": "composer create-project --prefer-dist laravel/laravel projectname"
+            },
+            {
+                "question_text": "Which file is used to configure database settings in Laravel?",
+                "category": "laravel",
+                "options": [
+                    "config/database.php",
+                    "database/config.php",
+                    "config/app.php",
+                    "app/config/database.php"
+                ],
+                "correct_answer": "config/database.php"
+            },
+            # Java
+            {
+                "question_text": "Which keyword is used to define a class in Java?",
+                "category": "java",
+                "options": [
+                    "class",
+                    "define",
+                    "object",
+                    "type"
+                ],
+                "correct_answer": "class"
+            },
+            {
+                "question_text": "How do you declare a method in Java?",
+                "category": "java",
+                "options": [
+                    "public void methodName()",
+                    "def methodName()",
+                    "function methodName()",
+                    "method methodName()"
+                ],
+                "correct_answer": "public void methodName()"
+            },
+            # Spring
+            {
+                "question_text": "Which annotation is used to define a Spring Boot application?",
+                "category": "spring",
+                "options": [
+                    "@SpringBootApplication",
+                    "@SpringApplication",
+                    "@BootApplication",
+                    "@Application"
+                ],
+                "correct_answer": "@SpringBootApplication"
+            },
+            {
+                "question_text": "How do you configure a Spring Bean?",
+                "category": "spring",
+                "options": [
+                    "@Bean",
+                    "@Component",
+                    "@Service",
+                    "@Repository"
+                ],
+                "correct_answer": "@Bean"
             }
         ]
+	
 
         for question_data in questions:
             question = Question(
@@ -266,6 +609,6 @@ def seed_database():
             db.session.add(question)
         
         db.session.commit()
+        print("Database seeded with new courses and questions.")
 
-if __name__ == "__main__":
-    seed_database()
+seed_database()

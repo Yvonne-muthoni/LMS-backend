@@ -1,8 +1,8 @@
-"""empty message
+"""added pro course
 
-Revision ID: 3253ee794488
+Revision ID: 5ac3dc41e515
 Revises: 
-Create Date: 2024-08-13 23:43:56.633291
+Create Date: 2024-08-17 20:51:11.775515
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '3253ee794488'
+revision = '5ac3dc41e515'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -27,6 +27,18 @@ def upgrade():
     sa.Column('tech_stack', sa.String(length=255), nullable=True),
     sa.Column('what_you_will_learn', sa.Text(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('pro_courses',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('image', sa.String(length=255), nullable=True),
+    sa.Column('video', sa.String(length=255), nullable=True),
+    sa.Column('tech_stack', sa.String(length=255), nullable=True),
+    sa.Column('what_you_will_learn', sa.Text(), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('requires_subscription', sa.Boolean(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('questions',
@@ -57,6 +69,7 @@ def upgrade():
     sa.Column('status', sa.String(length=20), nullable=True),
     sa.Column('result_desc', sa.String(length=255), nullable=True),
     sa.Column('timestamp', sa.DateTime(), nullable=True),
+    sa.Column('mpesa_receipt_number', sa.String(length=100), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -64,8 +77,10 @@ def upgrade():
     op.create_table('subscriptions',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('pro_course_id', sa.Integer(), nullable=True),
     sa.Column('amount', sa.Float(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['pro_course_id'], ['pro_courses.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -78,5 +93,6 @@ def downgrade():
     op.drop_table('payments')
     op.drop_table('users')
     op.drop_table('questions')
+    op.drop_table('pro_courses')
     op.drop_table('courses')
     # ### end Alembic commands ###
