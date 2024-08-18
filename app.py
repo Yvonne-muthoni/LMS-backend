@@ -483,16 +483,18 @@ class ProCourseResource(Resource):
             'is_active': new_course.is_active,
             'requires_subscription': new_course.requires_subscription
         }}, 201
-
+        
     def delete(self, course_id):
         """Delete a pro course."""
         course = ProCourse.query.get(course_id)
         if not course:
             return {'message': 'Pro course not found'}, 404
-        
+
         db.session.delete(course)
         db.session.commit()
         return {'message': 'Pro course deleted successfully'}, 200
+
+
     
 api.add_resource(Users, '/users')
 api.add_resource(Login, '/login')
