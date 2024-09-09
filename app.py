@@ -19,7 +19,7 @@ from flask_migrate import Migrate
 from flask_restful import Api, Resource
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
-from flask_cors import CORS
+# from flask_cors import CORS
 
 from models import db, User, Course, Question, Subscription, Payment
 from routes import course_bp
